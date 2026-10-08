@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit measurement' if editing else 'New measurement' }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-rulers me-2"></i>{{ 'Edit measurement' if editing else 'New measurement' }}</span>
+        <a class="small" href="{{ url_for('stats.index') }}">Back to body stats</a>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          <div class="mb-3" style="max-width: 260px;">
+            <label class="form-label" for="stat_date">Date *</label>
+            <input class="form-control" id="stat_date" name="stat_date" type="date"
+                   value="{{ stat['stat_date'] or '' }}" required>
+          </div>
+          <div class="row">
+            {% for field, label, min, max in fields %}
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="{{ field }}">
+                {{ label }} ({% if field == 'weight_kg' %}kg{% elif field == 'body_fat_pct' %}%{% else %}cm{% endif %})
+              </label>
+              <input class="form-control" id="{{ field }}" name="{{ field }}" type="number"
+                     step="0.1" min="{{ min }}" max="{{ max }}"
+                     value="{{ stat[field] if stat[field] is defined and stat[field] is not none else '' }}">
+            </div>
+            {% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="notes">Notes</label>
+            <input class="form-control" id="notes" name="notes" type="text"
+                   value="{{ stat['notes'] or '' }}" placeholder="Optional notes">
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success" type="submit">
+              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Save measurement' }}
+            </button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('stats.index') }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit meal' if editing else 'Log a meal' }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-cup-straw me-2"></i>{{ 'Edit meal' if editing else 'Log a meal' }}</span>
+        <a class="small" href="{{ url_for('diets.index') }}">Back to diet</a>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="diet_date">Date *</label>
+              <input class="form-control" id="diet_date" name="diet_date" type="date"
+                     value="{{ entry['diet_date'] or '' }}" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="meal_type">Meal type *</label>
+              <select class="form-select" id="meal_type" name="meal_type" required>
+                <option value="">Choose...</option>
+                {% for m in meal_types %}
+                <option value="{{ m }}" {% if entry['meal_type'] == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="calories">Calories (kcal)</label>
+              <input class="form-control" id="calories" name="calories" type="number" min="0" step="1"
+                     value="{{ entry['calories'] if entry['calories'] is not none else '' }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="description">Description *</label>
+            <input class="form-control" id="description" name="description" type="text"
+                   value="{{ entry['description'] or '' }}" placeholder="Chicken breast, rice and broccoli" required>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="protein_g">Protein (g)</label>
+              <input class="form-control" id="protein_g" name="protein_g" type="number" min="0" step="0.1"
+                     value="{{ entry['protein_g'] if entry['protein_g'] is not none else '' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="carbs_g">Carbs (g)</label>
+              <input class="form-control" id="carbs_g" name="carbs_g" type="number" min="0" step="0.1"
+                     value="{{ entry['carbs_g'] if entry['carbs_g'] is not none else '' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="fat_g">Fat (g)</label>
+              <input class="form-control" id="fat_g" name="fat_g" type="number" min="0" step="0.1"
+                     value="{{ entry['fat_g'] if entry['fat_g'] is not none else '' }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="notes">Notes</label>
+            <input class="form-control" id="notes" name="notes" type="text"
+                   value="{{ entry['notes'] or '' }}" placeholder="Optional notes">
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success" type="submit">
+              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Add meal' }}
+            </button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('diets.index') }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

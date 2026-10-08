@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Goals{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-1">Goals</h1>
+    <p class="text-muted mb-0">Performance and body targets</p>
+  </div>
+  <a class="btn btn-success" href="{{ url_for('goals.new') }}"><i class="bi bi-plus-lg me-1"></i>New goal</a>
+</div>
+
+<ul class="nav nav-pills mb-3">
+  {% for status in statuses %}
+  <li class="nav-item">
+    <a class="nav-link {% if status == active_status %}active{% endif %}"
+       href="{{ url_for('goals.index', status=status) }}">{{ status.capitalize() }}</a>
+  </li>
+  {% endfor %}
+</ul>
+
+<div class="row g-3">
+  {% for item in goals %}
+  {% set goal = item['goal'] %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="badge {% if goal['goal_type'] == 'performance' %}text-bg-primary{% else %}text-bg-info{% endif %}">
+              {{ goal['goal_type'] }}
+            </span>
+            <h2 class="h6 mt-2 mb-0">{{ goal['category'] }}</h2>
+          </div>
+          <div class="btn-group">
+            <a class="btn btn-sm btn-outline-success" href="{{ url_for('goals.edit', goal_id=goal['id']) }}">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form class="d-inline" action="{{ url_for('goals.delete', goal_id=goal['id']) }}" method="post"
+                  onsubmit="return confirm('Delete this goal?');">
+              <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <div class="progress" style="height: 14px;">
+            <div class="progress-bar {{ 'bg-success' if (item['percent'] or 0) >= 100 else 'bg-warning' }}"
+                 role="progressbar" style="width: {{ [item['percent'] or 0, 100]|min }}%"
+                 aria-valuenow="{{ item['percent'] or 0 }}" aria-valuemin="0" aria-valuemax="100">
+              {{ item['percent'] if item['percent'] is not none else '' }}%
+            </div>
+          </div>
+        </div>
+
+        <ul class="list-unstyled small mb-0">
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Target</span>
+            <span class="fw-semibold">{{ goal['target_value'] }}{{ goal['unit'] }}</span>
+          </li>
+          {% if goal['start_value'] is not none %}
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Start</span><span>{{ goal['start_value'] }}{{ goal['unit'] }}</span>
+          </li>
+          {% endif %}
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Current</span>
+            <span>{{ item['current'] ~ goal['unit'] if item['current'] is not none else 'no data' }}</span>
+          </li>
+          {% if goal['target_date'] %}
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Due</span><span>{{ goal['target_date'] }}</span>
+          </li>
+          {% endif %}
+          {% if item['source'] %}
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Progress from</span><span>{{ item['source'] }}</span>
+          </li>
+          {% endif %}
+        </ul>
+        {% if goal['notes'] %}
+        <p class="small text-muted mt-2 mb-0">{{ goal['notes'] }}</p>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-white small text-muted">
+        Created {{ goal['created_at'][:10] }}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-bullseye display-4 icon-grad"></i>
+        <p class="mt-3 mb-2">No {{ active_status }} goals.</p>
+        <a class="btn btn-success" href="{{ url_for('goals.new') }}">Create a goal</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

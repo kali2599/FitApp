@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="hero rounded-4 p-4 p-md-5 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+  <div class="position-relative" style="z-index: 1;">
+    <h1 class="hero-title h2 mb-1">Dashboard</h1>
+    <p class="hero-sub mb-0">{{ today.strftime('%A, %d %B %Y') }} · goals, training and nutrition at a glance</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2 position-relative" style="z-index: 1;">
+    <a class="btn btn-light" href="{{ url_for('workouts.new') }}"><i class="bi bi-lightning-charge-fill me-1"></i>Workout</a>
+    <a class="btn btn-glass" href="{{ url_for('diets.new') }}"><i class="bi bi-cup-straw me-1"></i>Meal</a>
+    <a class="btn btn-glass" href="{{ url_for('goals.new') }}"><i class="bi bi-bullseye me-1"></i>Goal</a>
+    <a class="btn btn-glass" href="{{ url_for('stats.new') }}"><i class="bi bi-rulers me-1"></i>Body stats</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card accent-blue h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <span class="stat-icon blue"><i class="bi bi-speedometer2"></i></span>
+          <span class="text-muted small text-uppercase fw-semibold">Current weight</span>
+        </div>
+        <div class="fs-4 fw-bold">
+          {% if latest and latest['weight_kg'] %}{{ latest['weight_kg'] }} kg{% else %}&mdash;{% endif %}
+        </div>
+        {% if weight_delta is not none %}
+        <span class="badge {{ 'bg-danger' if weight_delta > 0 else 'bg-success' }}">
+          {{ '%+.1f'|format(weight_delta) }} kg vs previous
+        </span>
+        {% else %}<span class="badge bg-secondary">no comparison yet</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card accent-fire h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <span class="stat-icon fire"><i class="bi bi-fire"></i></span>
+          <span class="text-muted small text-uppercase fw-semibold">Body fat</span>
+        </div>
+        <div class="fs-4 fw-bold">
+          {% if latest and latest['body_fat_pct'] %}{{ latest['body_fat_pct'] }} %{% else %}&mdash;{% endif %}
+        </div>
+        {% if fat_delta is not none %}
+        <span class="badge {{ 'bg-danger' if fat_delta > 0 else 'bg-success' }}">
+          {{ '%+.1f'|format(fat_delta) }} % vs previous
+        </span>
+        {% else %}<span class="badge bg-secondary">no comparison yet</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <span class="stat-icon"><i class="bi bi-emoji-heart-eyes"></i></span>
+          <span class="text-muted small text-uppercase fw-semibold">Training this week</span>
+        </div>
+        <div class="fs-4 fw-bold">{{ week['sessions'] }} session{{ 's' if week['sessions'] != 1 }}</div>
+        <span class="badge bg-success-subtle text-success border border-success-subtle">
+          {{ week['minutes'] }} min &middot; {{ week['burned']|int }} kcal burned
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card accent-red h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <span class="stat-icon red"><i class="bi bi-egg-fried"></i></span>
+          <span class="text-muted small text-uppercase fw-semibold">Eaten today</span>
+        </div>
+        <div class="fs-4 fw-bold">{{ today_totals['calories']|int }} kcal</div>
+        <span class="text-muted small">
+          P {{ today_totals['protein']|int }}g &middot;
+          C {{ today_totals['carbs']|int }}g &middot;
+          F {{ today_totals['fat']|int }}g &middot;
+          {{ today_totals['meals'] }} meal{{ 's' if today_totals['meals'] != 1 }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-graph-up me-2"></i>Weight &amp; body fat trend</div>
+      <div class="card-body">
+        <canvas id="trendChart" height="160"></canvas>
+        {% if not charts['trend']['labels'] %}
+        <p class="text-muted small mb-0">No measurements yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar3 me-2"></i>Weekly training volume</div>
+      <div class="card-body">
+        <canvas id="weeklyChart" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-fire me-2"></i>Daily calories (14 days)</div>
+      <div class="card-body">
+        <canvas id="caloriesChart" height="170"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-egg-fried me-2"></i>Macros (14 days)</div>
+      <div class="card-body">
+        <canvas id="macroChart" height="170"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-bullseye me-2"></i>Active goals</span>
+        <a class="small" href="{{ url_for('goals.index') }}">All goals</a>
+      </div>
+      <div class="card-body">
+        {% if goal_cards %}
+          {% for item in goal_cards %}
+          {% set goal = item['goal'] %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="fw-semibold">{{ goal['category'] }} <span class="text-muted fw-normal">({{ goal['goal_type'] }})</span></span>
+              <span class="text-muted">
+                {% if item['current'] is not none %}{{ item['current'] }}{{ goal['unit'] }} / {% endif %}{{ goal['target_value'] }}{{ goal['unit'] }}
+              </span>
+            </div>
+            <div class="progress" style="height: 10px;">
+              <div class="progress-bar {{ 'bg-success' if (item['percent'] or 0) >= 100 else 'bg-warning' }}"
+                   style="width: {{ [item['percent'] or 0, 100]|min }}%"></div>
+            </div>
+            <div class="small text-muted">
+              {{ item['percent'] if item['percent'] is not none else 'no data' }}%
+              {% if item['source'] %}&middot; from {{ item['source'] }}{% endif %}
+              {% if goal['target_date'] %}&middot; due {{ goal['target_date'] }}{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted mb-2">No active goals yet.</p>
+          <a class="btn btn-sm btn-success" href="{{ url_for('goals.new') }}">Set your first goal</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-header bg-white fw-semibold"><i class="bi bi-emoji-heart-eyes me-2"></i>Recent workouts</div>
+          <ul class="list-group list-group-flush">
+            {% for w in recent_workouts %}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+              <span>
+                <a href="{{ url_for('workouts.edit', workout_id=w['id']) }}" class="text-decoration-none">{{ w['name'] }}</a>
+                <br><span class="small text-muted">{{ w['workout_date'] }} &middot; {{ w['workout_type'] }}</span>
+              </span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">{{ w['duration_min'] or '?' }} min</span>
+            </li>
+            {% else %}
+            <li class="list-group-item text-muted small">No workouts yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-header bg-white fw-semibold"><i class="bi bi-cup-straw me-2"></i>Recent meals</div>
+          <ul class="list-group list-group-flush">
+            {% for m in recent_meals %}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+              <span>
+                <a href="{{ url_for('diets.edit', entry_id=m['id']) }}" class="text-decoration-none">{{ m['description'] }}</a>
+                <br><span class="small text-muted">{{ m['diet_date'] }} &middot; {{ m['meal_type'] }}</span>
+              </span>
+              <span class="badge bg-warning-subtle border">{{ m['calories']|int if m['calories'] else 0 }} kcal</span>
+            </li>
+            {% else %}
+            <li class="list-group-item text-muted small">No meals yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const charts = {{ charts|tojson }};
+  const grid = { color: 'rgba(0,0,0,.06)' };
+
+  if (charts.trend.labels.length) {
+    new Chart(document.getElementById('trendChart'), {
+      type: 'line',
+      data: {
+        labels: charts.trend.labels,
+        datasets: [
+          { label: 'Weight (kg)', data: charts.trend.weight, borderColor: '#2563eb',
+            backgroundColor: 'rgba(37,99,235,.16)', tension: .3, yAxisID: 'y', spanGaps: true, borderWidth: 3 },
+          { label: 'Body fat (%)', data: charts.trend.fat, borderColor: '#e11d48',
+            backgroundColor: 'rgba(225,29,72,.12)', tension: .3, yAxisID: 'y1', spanGaps: true, borderWidth: 3 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: true,
+        scales: { y: { position: 'left', grid }, y1: { position: 'right', grid: { drawOnChartArea: false } }, x: { grid } },
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+
+  new Chart(document.getElementById('weeklyChart'), {
+    type: 'bar',
+    data: {
+      labels: charts.weekly.labels,
+      datasets: [
+        { label: 'Minutes', data: charts.weekly.minutes, backgroundColor: '#7c3aed', borderRadius: 6 },
+        { label: 'Sessions', data: charts.weekly.sessions, backgroundColor: '#ef4444', borderRadius: 6 }
+      ]
+    },
+    options: {
+      maintainAspectRatio: true,
+      scales: { x: { stacked: false, grid: { display: false } }, y: { beginAtZero: true, grid } },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  new Chart(document.getElementById('caloriesChart'), {
+    type: 'bar',
+    data: {
+      labels: charts.intake.labels,
+      datasets: [{ label: 'kcal', data: charts.intake.calories, backgroundColor: '#4f46e5', borderRadius: 6 }]
+    },
+    options: {
+      maintainAspectRatio: true,
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid } },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  new Chart(document.getElementById('macroChart'), {
+    type: 'bar',
+    data: {
+      labels: charts.intake.labels,
+      datasets: [
+        { label: 'Protein (g)', data: charts.intake.protein, backgroundColor: '#e11d48', stack: 'm' },
+        { label: 'Carbs (g)', data: charts.intake.carbs, backgroundColor: '#2563eb', stack: 'm' },
+        { label: 'Fat (g)', data: charts.intake.fat, backgroundColor: '#7c3aed', stack: 'm' }
+      ]
+    },
+    options: {
+      maintainAspectRatio: true,
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, grid }
+      },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+</script>
+{% endblock %}

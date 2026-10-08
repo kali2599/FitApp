@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <div class="card shadow-sm auth-card">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3 text-center"><i class="bi bi-box-arrow-in-right me-2"></i>Log in</h1>
+        <form method="post" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="username">Username or email</label>
+            <input class="form-control" id="username" name="username" type="text"
+                   value="{{ form.get('username', '') }}" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-control" id="password" name="password" type="password" required>
+          </div>
+          <button class="btn btn-success w-100" type="submit">Log in</button>
+        </form>
+        <p class="small text-center mt-3 mb-0">
+          No account yet? <a href="{{ url_for('auth.signup') }}">Sign up</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
