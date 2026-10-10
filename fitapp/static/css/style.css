@@ -197,6 +197,11 @@ h1.h3 {
   width: 1.6rem; height: 1.6rem; margin-right: .5rem; border-radius: 50%;
   color: #fff; font-size: .8rem; font-weight: 600; background: #a1a1aa;
 }
+.exercise-no {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%; font-size: .75rem; font-weight: 600;
+  color: #4f46e5; background: #eef2ff; border: 1px solid #c7d2fe;
+}
 .day-card.day-blue     { border-color: #2563eb; }
 .day-card.day-blue > .card-header { background: linear-gradient(90deg, #eff6ff, #ffffff); }
 .day-card.day-blue .day-index { background: #2563eb; }

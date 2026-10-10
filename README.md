@@ -19,7 +19,12 @@ A Flask web app for managing your personal fitness life: **workouts, diets, goal
 - **Diet** (`/diets`) — create / edit / delete meal entries with calories and macros
 - **Goals** (`/goals`) — performance and body goals with automatic progress tracking
   (body goals use your latest measurement, performance goals your best matching exercise)
-- **Body stats** (`/stats`) — weight, body fat and measurements over time
+- **Body stats** (`/stats`) — weight, body fat and measurements over time. A
+  **lifestyle profile** (sessions/week, intensity, activity level, sleep, daily
+  calories, goal direction, water, stress) powers a **Body insights** report with
+  BMI, BMR (Mifflin–St Jeor), TDEE, calorie & macro targets, and personalised
+  diet / training / recovery suggestions. A compact version of the report also
+  appears on the dashboard
 
 All data is private per user and stored in a local SQLite database
 (`instance/fitapp.db`, auto-created on first run).
@@ -62,6 +67,7 @@ fitapp/
   db.py                 SQLite schema + helpers (flask init-db)
   auth.py               signup / login / logout, login_required
   progress.py           current value of a goal
+  insights.py           BMI / BMR / TDEE / calorie & macro targets + suggestions
   utils.py              form parsing helpers, goal progress math
   routes/               blueprints: dashboard, profile, workouts, diets, goals, stats
   templates/            Jinja2 templates (Bootstrap 5)

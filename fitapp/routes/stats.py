@@ -9,9 +9,10 @@ from flask import (
     url_for,
 )
 
+from .. import insights
 from ..auth import login_required
 from ..db import get_db
-from ..utils import to_date, to_float
+from ..utils import to_date, to_float, to_int
 
 bp = Blueprint("stats", __name__, url_prefix="/stats")
 
@@ -23,6 +24,89 @@ FIELDS = [
     ("hip_cm", "Hip", 30, 250),
     ("arm_cm", "Arm", 10, 100),
 ]
+
+INTENSITY_CHOICES = ["low", "moderate", "high"]
+ACTIVITY_CHOICES = ["sedentary", "light", "moderate", "active", "very_active"]
+GOAL_CHOICES = ["lose", "maintain", "gain"]
+STRESS_CHOICES = ["low", "moderate", "high"]
+
+LIFESTYLE_FIELDS = [
+    ("sessions_per_week", "Training sessions per week", to_int, 0, 21),
+    ("intensity", "Training intensity", None, None, None),
+    ("session_duration_min", "Session length (minutes)", to_int, 5, 600),
+    ("activity_level", "Daily activity level", None, None, None),
+    ("sleep_hours", "Sleep per night (hours)", to_float, 0.5, 24),
+    ("daily_calories", "Daily calorie intake", to_float, 500, 10000),
+    ("goal_direction", "Goal direction", None, None, None),
+    ("water_cups", "Water intake (cups/day)", to_float, 0, 30),
+    ("stress_level", "Stress level", None, None, None),
+]
+
+CHOICE_FIELDS = {
+    "intensity": INTENSITY_CHOICES,
+    "activity_level": ACTIVITY_CHOICES,
+    "goal_direction": GOAL_CHOICES,
+    "stress_level": STRESS_CHOICES,
+}
+
+
+def _lifestyle_form(data=None):
+    defaults = {
+        "sessions_per_week": "",
+        "intensity": "",
+        "session_duration_min": "",
+        "activity_level": "",
+        "sleep_hours": "",
+        "daily_calories": "",
+        "goal_direction": "",
+        "water_cups": "",
+        "stress_level": "",
+    }
+    data = dict(data) if data else None
+    if data is None:
+        return defaults
+    for key in defaults:
+        if data.get(key) is not None and str(data.get(key)) != "":
+            defaults[key] = data[key]
+    return defaults
+
+
+def _parse_lifestyle():
+    values = _lifestyle_form(request.form)
+    errors = []
+    for field, label, converter, minimum, maximum in LIFESTYLE_FIELDS:
+        raw = request.form.get(field, "").strip()
+        if field in CHOICE_FIELDS:
+            if raw and raw not in CHOICE_FIELDS[field]:
+                errors.append(f"Pick a valid option for {label.lower()}.")
+                continue
+            values[field] = raw
+            continue
+        if not raw:
+            values[field] = None
+            continue
+        try:
+            values[field] = converter(raw, minimum=minimum, maximum=maximum)
+        except ValueError as exc:
+            errors.append(f"{label} {exc}.")
+            values[field] = None
+    return values, errors
+
+
+def _latest_stat():
+    db = get_db()
+    return db.execute(
+        """SELECT * FROM body_stats WHERE user_id = ?
+           ORDER BY stat_date DESC, id DESC LIMIT 1""",
+        (g.user["id"],),
+    ).fetchone()
+
+
+def _lifestyle_row():
+    db = get_db()
+    return db.execute(
+        "SELECT * FROM user_lifestyle WHERE user_id = ?", (g.user["id"],)
+    ).fetchone()
 
 
 def _parse_form():
@@ -55,7 +139,72 @@ def index():
         "SELECT * FROM body_stats WHERE user_id = ? ORDER BY stat_date DESC, id DESC",
         (g.user["id"],),
     ).fetchall()
-    return render_template("stats/list.html", rows=rows, fields=FIELDS)
+    stat = rows[0] if rows else None
+    lifestyle = _lifestyle_row()
+    return render_template(
+        "stats/list.html",
+        rows=rows,
+        fields=FIELDS,
+        lifestyle=lifestyle,
+        insight=insights.compute(g.user, stat, lifestyle),
+        habits=bool(lifestyle),
+    )
+
+
+@bp.route("/lifestyle", methods=("GET", "POST"))
+@login_required
+def lifestyle():
+    if request.method == "POST":
+        values, errors = _parse_lifestyle()
+        if errors:
+            for error in errors:
+                flash(error, "danger")
+            return render_template(
+                "stats/lifestyle.html", values=_lifestyle_form(values), editing=bool(_lifestyle_row()),
+                intensity_choices=INTENSITY_CHOICES, activity_choices=ACTIVITY_CHOICES,
+                goal_choices=GOAL_CHOICES, stress_choices=STRESS_CHOICES,
+            ), 400
+
+        db = get_db()
+        db.execute(
+            """INSERT INTO user_lifestyle (user_id, sessions_per_week, intensity,
+                                          session_duration_min, activity_level,
+                                          sleep_hours, daily_calories, goal_direction,
+                                          water_cups, stress_level)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET
+                 sessions_per_week = excluded.sessions_per_week,
+                 intensity = excluded.intensity,
+                 session_duration_min = excluded.session_duration_min,
+                 activity_level = excluded.activity_level,
+                 sleep_hours = excluded.sleep_hours,
+                 daily_calories = excluded.daily_calories,
+                 goal_direction = excluded.goal_direction,
+                 water_cups = excluded.water_cups,
+                 stress_level = excluded.stress_level,
+                 updated_at = datetime('now')""",
+            (
+                g.user["id"],
+                values["sessions_per_week"],
+                values["intensity"] or None,
+                values["session_duration_min"],
+                values["activity_level"] or None,
+                values["sleep_hours"],
+                values["daily_calories"],
+                values["goal_direction"] or None,
+                values["water_cups"],
+                values["stress_level"] or None,
+            ),
+        )
+        db.commit()
+        flash("Lifestyle profile saved.", "success")
+        return redirect(url_for("stats.index"))
+
+    return render_template(
+        "stats/lifestyle.html", values=_lifestyle_form(_lifestyle_row()), editing=bool(_lifestyle_row()),
+        intensity_choices=INTENSITY_CHOICES, activity_choices=ACTIVITY_CHOICES,
+        goal_choices=GOAL_CHOICES, stress_choices=STRESS_CHOICES,
+    )
 
 
 @bp.route("/new", methods=("GET", "POST"))

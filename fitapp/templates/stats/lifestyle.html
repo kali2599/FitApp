@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit lifestyle' if editing else 'Lifestyle profile' }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-journal-text me-2"></i>{{ 'Edit lifestyle' if editing else 'Lifestyle profile' }}</span>
+        <a class="small" href="{{ url_for('stats.index') }}">Back to body stats</a>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          These details power your personal insights: calorie targets, macronutrient
+          suggestions and training advice. Everything is optional.
+        </p>
+        <form method="post" novalidate>
+          <div class="row">
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="sessions_per_week">Sessions per week</label>
+              <input class="form-control" id="sessions_per_week" name="sessions_per_week" type="number"
+                     min="0" max="21" step="1" value="{{ values['sessions_per_week'] or '' }}" placeholder="e.g. 3">
+            </div>
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="session_duration_min">Session length (min)</label>
+              <input class="form-control" id="session_duration_min" name="session_duration_min" type="number"
+                     min="5" max="600" step="1" value="{{ values['session_duration_min'] or '' }}" placeholder="e.g. 45">
+            </div>
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="intensity">Training intensity</label>
+              <select class="form-select" id="intensity" name="intensity">
+                <option value="">Not sure</option>
+                {% for option in intensity_choices %}
+                <option value="{{ option }}" {% if values['intensity'] == option %}selected{% endif %}>
+                  {{ option.capitalize() }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="activity_level">Daily activity level</label>
+              <select class="form-select" id="activity_level" name="activity_level">
+                <option value="">Not sure</option>
+                {% for option in activity_choices %}
+                <option value="{{ option }}" {% if values['activity_level'] == option %}selected{% endif %}>
+                  {% if option == 'sedentary' %}Sedentary (desk job){% elif option == 'light' %}Lightly active{% elif option == 'moderate' %}Moderately active{% elif option == 'active' %}Very active{% else %}Extra active{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Desk job or mostly sitting? Choose sedentary.</div>
+            </div>
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="sleep_hours">Sleep per night (h)</label>
+              <input class="form-control" id="sleep_hours" name="sleep_hours" type="number"
+                     min="0.5" max="24" step="0.5" value="{{ values['sleep_hours'] or '' }}" placeholder="e.g. 7.5">
+            </div>
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="daily_calories">Daily calories (kcal)</label>
+              <input class="form-control" id="daily_calories" name="daily_calories" type="number"
+                     min="500" max="10000" step="1" value="{{ values['daily_calories'] or '' }}" placeholder="e.g. 2200">
+            </div>
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="goal_direction">Goal direction</label>
+              <select class="form-select" id="goal_direction" name="goal_direction">
+                <option value="">Not sure</option>
+                {% for option in goal_choices %}
+                <option value="{{ option }}" {% if values['goal_direction'] == option %}selected{% endif %}>
+                  {% if option == 'lose' %}Lose weight{% elif option == 'maintain' %}Maintain{% else %}Gain muscle{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="water_cups">Water (cups/day)</label>
+              <input class="form-control" id="water_cups" name="water_cups" type="number"
+                     min="0" max="30" step="0.5" value="{{ values['water_cups'] or '' }}" placeholder="e.g. 8">
+            </div>
+            <div class="col-6 col-md-4 mb-3">
+              <label class="form-label" for="stress_level">Stress level</label>
+              <select class="form-select" id="stress_level" name="stress_level">
+                <option value="">Not sure</option>
+                {% for option in stress_choices %}
+                <option value="{{ option }}" {% if values['stress_level'] == option %}selected{% endif %}>
+                  {{ option.capitalize() }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success" type="submit">
+              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Save lifestyle' }}
+            </button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('stats.index') }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

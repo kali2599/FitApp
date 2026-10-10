@@ -5,6 +5,7 @@ from flask import Blueprint, g, render_template
 from .. import progress
 from ..auth import login_required
 from ..db import get_db
+from ..insights import compute
 from ..utils import goal_progress
 
 bp = Blueprint("dashboard", __name__)
@@ -43,6 +44,16 @@ def index():
     ).fetchall()
     latest = weight_rows[-1] if weight_rows else None
     previous = weight_rows[-2] if len(weight_rows) > 1 else None
+
+    lifestyle = db.execute(
+        "SELECT * FROM user_lifestyle WHERE user_id = ?", (uid,)
+    ).fetchone()
+    latest_stat = db.execute(
+        """SELECT * FROM body_stats WHERE user_id = ?
+           ORDER BY stat_date DESC, id DESC LIMIT 1""",
+        (uid,),
+    ).fetchone()
+    insight = compute(g.user, latest_stat, lifestyle)
 
     def delta(current_row, previous_row, key):
         if not current_row or not previous_row or current_row[key] is None or previous_row[key] is None:
@@ -146,6 +157,7 @@ def index():
         latest=latest,
         weight_delta=delta(latest, previous, "weight_kg"),
         fat_delta=delta(latest, previous, "body_fat_pct"),
+        insight=insight,
         goal_cards=goal_cards,
         recent_workouts=recent_workouts,
         recent_meals=recent_meals,

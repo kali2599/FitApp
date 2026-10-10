@@ -84,6 +84,50 @@
   </div>
 </div>
 
+{% set dm = insight['metrics'] %}
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <span class="fw-semibold"><i class="bi bi-lightbulb me-2 text-violet"></i>Body insights</span>
+    <a class="small" href="{{ url_for('stats.index') }}">Body stats</a>
+  </div>
+  <div class="card-body">
+    {% if dm['bmi'] %}
+    <div class="row text-center">
+      <div class="col-6 col-md">
+        <div class="text-muted small text-uppercase fw-semibold">BMI</div>
+        <div class="fs-4 fw-bold text-blue">{{ dm['bmi'] }}</div>
+        <span class="badge {{ 'bg-danger' if dm['bmi_category'] in ('overweight', 'obese') else ('bg-warning' if dm['bmi_category'] == 'underweight' else 'bg-success') }}">
+          {{ dm['bmi_category'] }}
+        </span>
+      </div>
+      <div class="col-6 col-md">
+        <div class="text-muted small text-uppercase fw-semibold">BMR</div>
+        <div class="fs-4 fw-bold text-violet">{{ dm['bmr'] if dm['bmr'] is not none else '—' }}</div>
+        <span class="small text-muted">kcal resting</span>
+      </div>
+      <div class="col-6 col-md">
+        <div class="text-muted small text-uppercase fw-semibold">Calorie target</div>
+        <div class="fs-4 fw-bold text-rose">{{ dm['calorie_target'] if dm['calorie_target'] is not none else '—' }}</div>
+        <span class="small text-muted">{{ dm['goal_direction'] if dm['goal_direction'] else 'not set' }}</span>
+      </div>
+      <div class="col-6 col-md">
+        <div class="text-muted small text-uppercase fw-semibold">Intake vs target</div>
+        <div class="fs-4 fw-bold {{ 'text-danger' if dm.get('calorie_delta', 0) > 0 else ('text-success' if dm.get('calorie_delta', 0) < 0 else '') }}">
+          {% if dm['calorie_delta'] is defined and dm['calorie_delta'] is not none %}{{ '%+d'|format(dm['calorie_delta']) }}{% else %}—{% endif %}
+        </div>
+        <span class="small text-muted">kcal/day</span>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted mb-2">Complete your profile (height, birth date) and log a weight measurement plus your lifestyle to unlock BMI and calorie targets.</p>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('stats.lifestyle') }}"><i class="bi bi-journal-text me-1"></i>Lifestyle profile</a>
+      <a class="btn btn-sm btn-outline-success" href="{{ url_for('stats.new') }}"><i class="bi bi-plus-lg me-1"></i>New measurement</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
 <div class="row g-3 mb-4">
   <div class="col-lg-7">
     <div class="card shadow-sm border-0 h-100">

@@ -1,5 +1,3 @@
-import datetime as dt
-
 from flask import (
     Blueprint,
     abort,
@@ -493,71 +491,6 @@ def _get_session(session_id):
     if session is None:
         abort(404)
     return session
-
-
-@bp.route("/<int:workout_id>/days/<int:day_id>/log", methods=("GET", "POST"))
-@login_required
-def log_day(workout_id, day_id):
-    workout = _get_workout(workout_id)
-    day = _get_day(workout_id, day_id)
-    db = get_db()
-
-    entries = db.execute(
-        "SELECT * FROM day_exercises WHERE workout_day_id = ? ORDER BY position, id", (day_id,)
-    ).fetchall()
-
-    if request.method == "POST":
-        errors = []
-        try:
-            performed_date = to_date(request.form.get("performed_date")) or dt.date.today().isoformat()
-        except ValueError as exc:
-            errors.append(f"Date {exc}.")
-            performed_date = dt.date.today().isoformat()
-        duration = _parse_num(request.form.get("duration_min"), to_int, "Duration", errors,
-                              minimum=0, maximum=1440)
-        calories = _parse_num(request.form.get("calories"), to_float, "Calories", errors,
-                              minimum=0, maximum=20000)
-        if errors:
-            for error in errors:
-                flash(error, "danger")
-            return render_template(
-                "workouts/log_day.html", workout=workout, day=day,
-                form=request.form, today=dt.date.today().isoformat(),
-            ), 400
-
-        cursor = db.execute(
-            """INSERT INTO workout_sessions (user_id, workout_day_id, performed_date, duration_min, calories, notes)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (g.user["id"], day_id, performed_date, duration,
-             calories, request.form.get("notes", "").strip()),
-        )
-        session_id = cursor.lastrowid
-
-        circuit_labels = dict(
-            db.execute("SELECT id, label FROM circuits WHERE workout_day_id = ?", (day_id,)).fetchall()
-        )
-        for position, ex in enumerate(entries):
-            is_circuit = ex["circuit_id"] is not None
-            db.execute(
-                """INSERT INTO session_entries
-                   (session_id, kind, name, circuit_label, sets, reps, metric, weight_kg,
-                    duration_sec, duration_min, distance_km, position)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    session_id, ex["kind"], ex["name"],
-                    circuit_labels.get(ex["circuit_id"]) if is_circuit else None,
-                    ex["sets"], ex["reps"], ex["metric"], ex["weight_kg"],
-                    ex["duration_sec"], ex["duration_min"], ex["distance_km"], position,
-                ),
-            )
-        db.commit()
-        flash("Workout logged. Review your actual numbers.", "success")
-        return redirect(url_for("workouts.session_edit", session_id=session_id))
-
-    return render_template(
-        "workouts/log_day.html", workout=workout, day=day,
-        form={}, today=dt.date.today().isoformat(),
-    )
 
 
 @bp.route("/sessions")

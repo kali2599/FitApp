@@ -131,6 +131,21 @@ CREATE TABLE IF NOT EXISTS goals (
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS user_lifestyle (
+    user_id             INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    sessions_per_week   INTEGER,
+    intensity           TEXT CHECK (intensity IN ('low', 'moderate', 'high')),
+    session_duration_min INTEGER,
+    activity_level      TEXT CHECK (activity_level IN
+                        ('sedentary', 'light', 'moderate', 'active', 'very_active')),
+    sleep_hours         REAL,
+    daily_calories      REAL,
+    goal_direction      TEXT CHECK (goal_direction IN ('lose', 'maintain', 'gain')),
+    water_cups          REAL,
+    stress_level        TEXT CHECK (stress_level IN ('low', 'moderate', 'high')),
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_workouts_user ON workouts (user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_days_workout ON workout_days (workout_id, position);
 CREATE INDEX IF NOT EXISTS idx_circuits_day ON circuits (workout_day_id, position);
