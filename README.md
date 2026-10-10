@@ -9,8 +9,13 @@ A Flask web app for managing your personal fitness life: **workouts, diets, goal
   daily calories & macros, active goals with progress bars, recent activity
 - **Personal page** (`/profile`) — editable profile (username, email, height, birth date,
   sex, password), lifetime totals, latest measurements, personal records
-- **Workouts** (`/workouts`) — create / edit / delete workouts with sets of exercises
-  (name, sets, reps, weight)
+- **Workouts** (`/workouts`) — build multi-day **strength**, **cardio** or **hybrid**
+  training programs. Each day holds standalone exercises and/or **mini-circuits**
+  (2+ exercises back-to-back, no rest between them, rest after each round).
+  Strength entries track sets, reps and weight *or* duration; cardio entries are
+  `run` / `swimming` / `spinning` with duration and optional distance. Log performed
+  **sessions** ("Log this day") and later edit your actual reps/weight/time in
+  `/workouts/sessions`
 - **Diet** (`/diets`) — create / edit / delete meal entries with calories and macros
 - **Goals** (`/goals`) — performance and body goals with automatic progress tracking
   (body goals use your latest measurement, performance goals your best matching exercise)

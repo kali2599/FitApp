@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit module' if day_id else 'New module' }} · {{ workout['name'] }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-11">
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="fw-semibold">
+          <i class="bi bi-calendar-day me-2"></i>
+          {{ 'Edit workout-module' if day_id else 'Add workout-module' }}
+          <span class="badge
+            {% if workout['workout_type'] == 'strength' %}text-bg-primary
+            {% elif workout['workout_type'] == 'cardio' %}text-bg-danger
+            {% else %}text-bg-dark{% endif %} ms-1">{{ workout['workout_type'] }}</span>
+        </span>
+        <a class="small" href="{{ url_for('workouts.detail', workout_id=workout['id']) }}">Back to workout</a>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate id="dayForm">
+          <div class="row">
+            <div class="col-md-5 mb-3">
+              <label class="form-label" for="day_name">Module name *</label>
+              <input class="form-control" id="day_name" name="day_name" type="text"
+                     placeholder="e.g. Module 1 - Push" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="day_focus">Focus</label>
+              <input class="form-control" id="day_focus" name="day_focus" type="text"
+                     placeholder="Chest, shoulders, triceps">
+            </div>
+            <div class="col-md-3 mb-3">
+              <label class="form-label" for="day_notes">Notes</label>
+              <input class="form-control" id="day_notes" name="day_notes" type="text" placeholder="Optional">
+            </div>
+          </div>
+
+          <hr>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <span class="fw-semibold"><i class="bi bi-arrow-repeat me-2 text-violet"></i>Mini-circuits</span>
+              <div class="small text-muted">Exercises in a circuit run back-to-back with no rest; rest happens after each round.</div>
+            </div>
+            <button class="btn btn-sm btn-outline-success" type="button" id="addCircuit">
+              <i class="bi bi-plus-lg me-1"></i>Add circuit
+            </button>
+          </div>
+          <div id="circuitRows" class="mb-2"></div>
+          <p class="text-muted small" id="noCircuits">No circuits. Standalone exercises below.</p>
+
+          <hr>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold"><i class="bi bi-list-check me-2 text-blue"></i>Exercises</span>
+          </div>
+          <div id="exerciseRows"></div>
+
+          <div class="d-flex flex-wrap gap-2 mt-4">
+            <button class="btn btn-outline-success" type="button" id="addExercise">
+              <i class="bi bi-plus-lg me-1"></i>Add exercise
+            </button>
+            <button class="btn btn-success" type="submit">
+              <i class="bi bi-check-lg me-1"></i>Save
+            </button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('workouts.detail', workout_id=workout['id']) }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const INITIAL = {{ data|tojson }};
+  const WORKOUT_TYPE = {{ workout['workout_type']|tojson }};
+  const ACTIVITIES = ['run', 'swimming', 'spinning'];
+
+  let circuits = INITIAL.circuits.map((c, i) => ({
+    key: c.key || ('c' + i), label: c.label || ('Circuit ' + String.fromCharCode(65 + i)),
+    rounds: c.rounds, rest: c.rest
+  }));
+  let exercises = INITIAL.exercises.map(e => ({ ...e }));
+
+  document.getElementById('day_name').value = INITIAL.name || '';
+  document.getElementById('day_focus').value = INITIAL.focus || '';
+  document.getElementById('day_notes').value = INITIAL.notes || '';
+
+  const circuitEl = document.getElementById('circuitRows');
+  const exerciseEl = document.getElementById('exerciseRows');
+  const noCircuits = document.getElementById('noCircuits');
+
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+
+  function kindLocked() {
+    if (WORKOUT_TYPE === 'strength') return 'strength';
+    if (WORKOUT_TYPE === 'cardio') return 'cardio';
+    return null;
+  }
+
+  function renderCircuits() {
+    noCircuits.style.display = circuits.length ? 'none' : '';
+    circuitEl.innerHTML = circuits.map((c, i) => `
+      <div class="row g-2 align-items-end mb-2" data-cidx="${i}">
+        <div class="col-md-5">
+          <label class="form-label small mb-1">Label</label>
+          <input type="hidden" name="circuit_key" value="${esc(c.key)}">
+          <input class="form-control form-control-sm" name="circuit_label" value="${esc(c.label)}" placeholder="Circuit A">
+        </div>
+        <div class="col-4 col-md-3">
+          <label class="form-label small mb-1">Rounds</label>
+          <input class="form-control form-control-sm" name="circuit_rounds" type="number" min="1" max="100" value="${esc(c.rounds)}">
+        </div>
+        <div class="col-4 col-md-3">
+          <label class="form-label small mb-1">Rest after round (s)</label>
+          <input class="form-control form-control-sm" name="circuit_rest" type="number" min="0" max="3600" value="${esc(c.rest)}">
+        </div>
+        <div class="col-4 col-md-1 text-end">
+          <button class="btn btn-sm btn-outline-danger remove-circuit" type="button" title="Remove">&times;</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function circuitOptions(selected, onlyStandalone) {
+    let opts = ['<option value="">Standalone (no circuit)</option>'];
+    if (!onlyStandalone) {
+      opts = opts.concat(circuits.map(c =>
+        `<option value="${esc(c.key)}" ${selected === c.key ? 'selected' : ''}>${esc(c.label)}</option>`));
+    }
+    return opts.join('');
+  }
+
+  function exerciseRow(e, i) {
+    const locked = kindLocked();
+    const kind = locked || e.kind || 'strength';
+    const inCircuit = !!e.circuit;
+    let fields = '';
+
+    if (kind === 'strength') {
+      fields += inCircuit
+        ? `<input type="hidden" name="ex_sets" value="">`
+        : `
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">Sets</label>
+          <input class="form-control form-control-sm" name="ex_sets" type="number" min="1" max="100"
+                 value="${esc(e.sets)}">
+        </div>`;
+      fields += `
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">Reps</label>
+          <input class="form-control form-control-sm" name="ex_reps" type="text" inputmode="numeric"
+                 placeholder="8 or max" value="${esc(e.reps)}">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">Weight (kg)</label>
+          <input class="form-control form-control-sm" name="ex_weight"
+                 type="text" inputmode="decimal" value="${esc(e.weight)}" placeholder="80 or max">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">Duration (s)</label>
+          <input class="form-control form-control-sm" name="ex_duration"
+                 type="text" inputmode="numeric" value="${esc(e.duration)}" placeholder="60 or max">
+        </div>`;
+      if (inCircuit) {
+        fields += `<input type="hidden" name="ex_distance" value="">
+                   <input type="hidden" name="ex_rest" value="">`;
+      } else {
+        fields += `<input type="hidden" name="ex_distance" value="">
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">Rest (s)</label>
+          <input class="form-control form-control-sm" name="ex_rest" type="number" min="0" max="3600" value="${esc(e.rest)}">
+        </div>`;
+      }
+    } else {
+      fields += `
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">Duration (min)</label>
+          <input class="form-control form-control-sm" name="ex_duration" type="text" inputmode="decimal" value="${esc(e.duration)}" placeholder="30 or max">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small mb-1">Distance (km)</label>
+          <input class="form-control form-control-sm" name="ex_distance" type="number" min="0" step="0.1" value="${esc(e.distance)}">
+        </div>
+        <input type="hidden" name="ex_sets" value="">
+        <input type="hidden" name="ex_reps" value="">
+        <input type="hidden" name="ex_weight" value="">
+        <input type="hidden" name="ex_rest" value="">`;
+    }
+
+    const nameField = kind === 'cardio'
+      ? `<select class="form-select form-select-sm" name="ex_name">
+           ${ACTIVITIES.map(a => `<option value="${a}" ${e.name === a ? 'selected' : ''}>${a}</option>`).join('')}
+         </select>`
+      : `<input class="form-control form-control-sm" name="ex_name" value="${esc(e.name)}" placeholder="Bench press">`;
+
+    const kindField = locked
+      ? `<input type="hidden" name="ex_kind" value="${kind}">
+         <span class="badge ${kind === 'cardio' ? 'text-bg-danger' : 'text-bg-primary'}">${kind}</span>`
+      : `<select class="form-select form-select-sm" name="ex_kind">
+           <option value="strength" ${kind === 'strength' ? 'selected' : ''}>Strength</option>
+           <option value="cardio" ${kind === 'cardio' ? 'selected' : ''}>Cardio</option>
+         </select>`;
+
+    return `
+      <div class="card mb-2 exercise-card" data-eidx="${i}">
+        <div class="card-body py-2">
+          <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-1">${kindField}</div>
+            <div class="col-6 col-md-2">${nameField}</div>
+            ${fields}
+            <div class="col-8 col-md-2">
+              <label class="form-label small mb-1">Circuit</label>
+              <select class="form-select form-select-sm" name="ex_circuit">
+                ${circuitOptions(kind === 'cardio' ? '' : e.circuit, kind === 'cardio')}
+              </select>
+            </div>
+            <div class="col-4 col-md-1 text-end">
+              <button class="btn btn-sm btn-outline-danger remove-exercise" type="button" title="Remove">&times;</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderExercises() {
+    exerciseEl.innerHTML = exercises.map((e, i) => exerciseRow(e, i)).join('') ||
+      '<p class="text-muted small">No exercises yet. Click "Add exercise".</p>';
+  }
+
+  // read current DOM values back into state before structural re-render
+  function syncFromDom() {
+    circuitEl.querySelectorAll('[data-cidx]').forEach(row => {
+      const i = Number(row.dataset.cidx);
+      if (!circuits[i]) return;
+      circuits[i].label = row.querySelector('[name=circuit_label]').value;
+      circuits[i].rounds = row.querySelector('[name=circuit_rounds]').value;
+      circuits[i].rest = row.querySelector('[name=circuit_rest]').value;
+    });
+    exerciseEl.querySelectorAll('[data-eidx]').forEach(row => {
+      const i = Number(row.dataset.eidx);
+      if (!exercises[i]) return;
+      const get = (n) => { const el = row.querySelector('[name=' + n + ']'); return el ? el.value : ''; };
+      const e = exercises[i];
+      e.name = get('ex_name');
+      e.sets = get('ex_sets');
+      e.reps = get('ex_reps');
+      e.weight = get('ex_weight');
+      e.duration = get('ex_duration');
+      e.distance = get('ex_distance');
+      e.rest = get('ex_rest');
+      e.circuit = get('ex_circuit');
+    });
+  }
+
+  document.getElementById('addCircuit').addEventListener('click', () => {
+    syncFromDom();
+    circuits.push({ key: 'c' + Date.now(), label: 'Circuit ' + String.fromCharCode(65 + circuits.length), rounds: 3, rest: 60 });
+    renderCircuits(); renderExercises();
+  });
+
+  document.getElementById('addExercise').addEventListener('click', () => {
+    syncFromDom();
+    const locked = kindLocked();
+    exercises.push({ kind: locked || 'strength', name: '', sets: '', reps: '',
+                     weight: '', duration: '', distance: '', rest: '', circuit: '' });
+    renderExercises();
+  });
+
+  circuitEl.addEventListener('click', (ev) => {
+    if (!ev.target.classList.contains('remove-circuit')) return;
+    syncFromDom();
+    circuits.splice(Number(ev.target.closest('[data-cidx]').dataset.cidx), 1);
+    renderCircuits(); renderExercises();
+  });
+
+  exerciseEl.addEventListener('click', (ev) => {
+    if (!ev.target.classList.contains('remove-exercise')) return;
+    syncFromDom();
+    exercises.splice(Number(ev.target.closest('[data-eidx]').dataset.eidx), 1);
+    renderExercises();
+  });
+
+  exerciseEl.addEventListener('change', (ev) => {
+    if (ev.target.name === 'ex_kind' || ev.target.name === 'ex_circuit') {
+      syncFromDom();
+      renderExercises();
+    }
+  });
+
+  // weight and duration are mutually exclusive: filling one clears the other
+  exerciseEl.addEventListener('input', (ev) => {
+    if (ev.target.name !== 'ex_weight' && ev.target.name !== 'ex_duration') return;
+    const row = ev.target.closest('[data-eidx]');
+    if (!row) return;
+    const weight = row.querySelector('[name=ex_weight]');
+    const duration = row.querySelector('[name=ex_duration]');
+    if (!weight || !duration) return;
+    if (ev.target === weight && weight.value !== '') duration.value = '';
+    else if (ev.target === duration && duration.value !== '') weight.value = '';
+  });
+
+  renderCircuits();
+  renderExercises();
+  if (!exercises.length) document.getElementById('addExercise').click();
+</script>
+{% endblock %}

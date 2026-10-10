@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}{{ workout['name'] }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <h1 class="h3 mb-0">{{ workout['name'] }}</h1>
+      <span class="badge
+        {% if workout['workout_type'] == 'strength' %}text-bg-primary
+        {% elif workout['workout_type'] == 'cardio' %}text-bg-danger
+        {% else %}text-bg-dark{% endif %}">{{ workout['workout_type'] }}</span>
+    </div>
+    {% if workout['notes'] %}<p class="text-muted mb-0 mt-1">{{ workout['notes'] }}</p>{% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-success" href="{{ url_for('workouts.edit', workout_id=workout['id']) }}">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    <a class="btn btn-success" href="{{ url_for('workouts.day_new', workout_id=workout['id']) }}">
+      <i class="bi bi-plus-lg me-1"></i>Add module
+    </a>
+  </div>
+</div>
+
+{% set palette = ['blue', 'violet', 'rose', 'amber'] %}
+{% for day in days %}
+<div class="card shadow-sm mb-3 day-card day-{{ palette[loop.index0 % 4] }}">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <span class="fw-semibold">
+        <span class="day-index">{{ loop.index }}</span>{{ day['name'] }}
+      </span>
+      {% if day['focus'] %}<span class="badge text-bg-light border ms-2">{{ day['focus'] }}</span>{% endif %}
+      {% if last_performed.get(day['id']) %}
+      <span class="badge bg-success-subtle text-success border ms-1">
+        last done {{ last_performed[day['id']] }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="btn-group">
+      <a class="btn btn-sm btn-outline-success" href="{{ url_for('workouts.day_edit', workout_id=workout['id'], day_id=day['id']) }}">
+        <i class="bi bi-pencil me-1"></i>Edit module
+      </a>
+      <a class="btn btn-sm btn-success" href="{{ url_for('workouts.log_day', workout_id=workout['id'], day_id=day['id']) }}">
+        <i class="bi bi-check2-circle me-1"></i>Log module
+      </a>
+      <form class="d-inline" action="{{ url_for('workouts.day_delete', workout_id=workout['id'], day_id=day['id']) }}"
+            method="post" onsubmit="return confirm('Delete this workout-module?');">
+        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+      </form>
+    </div>
+  </div>
+  <div class="card-body">
+    {% set circuits = circuits_by_day.get(day['id'], []) %}
+    {% set standalone = standalone_by_day.get(day['id'], []) %}
+    {% if not circuits and not standalone %}
+    <p class="text-muted mb-0">No exercises yet. <a href="{{ url_for('workouts.day_edit', workout_id=workout['id'], day_id=day['id']) }}">Add some</a>.</p>
+    {% endif %}
+
+    {% for circuit in circuits %}
+    <div class="circuit-block rounded-3 p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-semibold text-violet"><i class="bi bi-arrow-repeat me-2"></i>{{ circuit['label'] }}</span>
+        <span class="small text-muted">
+          {{ circuit['rounds'] }} round{{ 's' if circuit['rounds'] != 1 }}
+          &middot; rest {{ circuit['rest_sec'] }}s after each round &middot; no rest between exercises
+        </span>
+      </div>
+      <table class="table table-sm align-middle mb-0">
+        <tbody>
+          {% for e in members_by_circuit.get(circuit['id'], []) %}
+          <tr>
+            <td style="width: 2rem;"><i class="bi bi-dash-lg text-muted"></i></td>
+            <td>{{ e['name'] }}</td>
+            <td class="text-end text-muted">
+              {% if e['reps'] %}{% if e['reps'] == 'max' %}max reps{% else %}{{ e['reps'] }} reps{% endif %}{% endif %}
+              {% if e['weight_kg'] is not none %}&middot; {% if e['weight_kg'] == 'max' %}max{% else %}{{ e['weight_kg'] }} kg{% endif %}{% endif %}
+              {% if e['duration_sec'] %}&middot; {% if e['duration_sec'] == 'max' %}max{% else %}{{ e['duration_sec'] }}s{% endif %}{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+
+    {% if standalone %}
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Exercise</th>
+          <th>Details</th>
+          <th>Rest</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in standalone %}
+        <tr>
+          <td>
+            {% if e['kind'] == 'cardio' %}
+            <i class="bi bi-activity text-rose me-1"></i>{{ e['name'] }}
+            {% else %}
+            <i class="bi bi-barbell text-blue me-1"></i>{{ e['name'] }}
+            {% endif %}
+          </td>
+          <td class="text-muted">
+            {% if e['kind'] == 'cardio' %}
+              {% if e['duration_min'] == 'max' %}max{% else %}{{ e['duration_min'] }} min{% endif %}{% if e['distance_km'] %} &middot; {{ e['distance_km'] }} km{% endif %}
+            {% else %}
+              {% if e['sets'] %}{{ e['sets'] }} sets{% endif %}
+              {% if e['reps'] %} &times; {% if e['reps'] == 'max' %}max reps{% else %}{{ e['reps'] }} reps{% endif %}{% endif %}
+              {% if e['weight_kg'] is not none %} &middot; {% if e['weight_kg'] == 'max' %}max{% else %}{{ e['weight_kg'] }} kg{% endif %}{% endif %}
+              {% if e['duration_sec'] %} &middot; {% if e['duration_sec'] == 'max' %}max{% else %}{{ e['duration_sec'] }}s{% endif %}{% endif %}
+            {% endif %}
+          </td>
+          <td>{{ e['rest_sec'] ~ 's' if e['rest_sec'] is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="card shadow-sm border-0">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-calendar-plus display-4 icon-grad"></i>
+    <p class="mt-3 mb-2">This workout has no modules yet.</p>
+    <a class="btn btn-success" href="{{ url_for('workouts.day_new', workout_id=workout['id']) }}">Add workout-module</a>
+  </div>
+</div>
+{% endfor %}
+
+<div class="mt-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('workouts.index') }}">
+    <i class="bi bi-arrow-left me-1"></i>All workouts
+  </a>
+</div>
+{% endblock %}

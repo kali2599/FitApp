@@ -23,9 +23,9 @@ def _context():
 
     totals = db.execute(
         """SELECT
-             (SELECT COUNT(*) FROM workouts WHERE user_id = ?) AS workouts,
-             (SELECT COALESCE(SUM(duration_min), 0) FROM workouts WHERE user_id = ?) AS minutes,
-             (SELECT COALESCE(SUM(calories), 0) FROM workouts WHERE user_id = ?) AS burned,
+             (SELECT COUNT(*) FROM workout_sessions WHERE user_id = ?) AS workouts,
+             (SELECT COALESCE(SUM(duration_min), 0) FROM workout_sessions WHERE user_id = ?) AS minutes,
+             (SELECT COALESCE(SUM(calories), 0) FROM workout_sessions WHERE user_id = ?) AS burned,
              (SELECT COUNT(*) FROM diets WHERE user_id = ?) AS meals,
              (SELECT COUNT(*) FROM goals WHERE user_id = ? AND status = 'active') AS active_goals,
              (SELECT COUNT(*) FROM body_stats WHERE user_id = ?) AS stat_entries""",
@@ -33,12 +33,14 @@ def _context():
     ).fetchone()
 
     records = db.execute(
-        """SELECT e.name, MAX(e.weight_kg) AS best_weight,
-                  MAX(e.reps) AS best_reps, MAX(e.sets) AS best_sets,
-                  MAX(w.workout_date) AS last_date
-           FROM exercises e
-           JOIN workouts w ON w.id = e.workout_id
-           WHERE w.user_id = ?
+        """SELECT e.name,
+                  MAX(CASE WHEN e.weight_kg GLOB '*[a-zA-Z]*' THEN NULL ELSE e.weight_kg END) AS best_weight,
+                  MAX(CASE WHEN e.reps GLOB '*[a-zA-Z]*' THEN NULL ELSE e.reps END) AS best_reps,
+                  MAX(e.sets) AS best_sets,
+                  MAX(s.performed_date) AS last_date
+           FROM session_entries e
+           JOIN workout_sessions s ON s.id = e.session_id
+           WHERE s.user_id = ? AND e.kind = 'strength'
            GROUP BY LOWER(TRIM(e.name))
            HAVING best_weight IS NOT NULL OR best_reps IS NOT NULL
            ORDER BY best_weight DESC NULLS LAST, best_reps DESC

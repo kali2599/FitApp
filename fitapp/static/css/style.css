@@ -183,6 +183,33 @@ h1.h3 {
 .stat-icon.red { background-image: linear-gradient(135deg, #ef4444, #be123c); }
 .stat-icon.blue { background-image: linear-gradient(135deg, #2563eb, #38bdf8); }
 
+.circuit-block {
+  background: linear-gradient(135deg, #f5f3ff, #eef2ff);
+  border: 1px dashed #c4b5fd;
+}
+
+.exercise-card { background: #fbfbff; }
+
+.day-card { border: 2px solid #d4d4d8; }
+.day-card > .card-header { border-bottom: 1px solid rgba(0,0,0,.05); }
+.day-card .day-index {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.6rem; height: 1.6rem; margin-right: .5rem; border-radius: 50%;
+  color: #fff; font-size: .8rem; font-weight: 600; background: #a1a1aa;
+}
+.day-card.day-blue     { border-color: #2563eb; }
+.day-card.day-blue > .card-header { background: linear-gradient(90deg, #eff6ff, #ffffff); }
+.day-card.day-blue .day-index { background: #2563eb; }
+.day-card.day-violet   { border-color: #7c3aed; }
+.day-card.day-violet > .card-header { background: linear-gradient(90deg, #f5f3ff, #ffffff); }
+.day-card.day-violet .day-index { background: #7c3aed; }
+.day-card.day-rose     { border-color: #e11d48; }
+.day-card.day-rose > .card-header { background: linear-gradient(90deg, #fff1f2, #ffffff); }
+.day-card.day-rose .day-index { background: #e11d48; }
+.day-card.day-amber    { border-color: #d97706; }
+.day-card.day-amber > .card-header { background: linear-gradient(90deg, #fffbeb, #ffffff); }
+.day-card.day-amber .day-index { background: #d97706; }
+
 /* ---------- hero ---------- */
 .hero {
   position: relative;

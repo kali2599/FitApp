@@ -32,7 +32,7 @@ def index():
         """SELECT COUNT(*) AS sessions,
                   COALESCE(SUM(duration_min), 0) AS minutes,
                   COALESCE(SUM(calories), 0) AS burned
-           FROM workouts WHERE user_id = ? AND workout_date >= ?""",
+           FROM workout_sessions WHERE user_id = ? AND performed_date >= ?""",
         (uid, week_start),
     ).fetchone()
 
@@ -50,8 +50,8 @@ def index():
         return round(current_row[key] - previous_row[key], 1)
 
     workout_rows = db.execute(
-        """SELECT workout_date, duration_min FROM workouts
-           WHERE user_id = ? ORDER BY workout_date""",
+        """SELECT performed_date AS workout_date, duration_min FROM workout_sessions
+           WHERE user_id = ? ORDER BY performed_date""",
         (uid,),
     ).fetchall()
     diet_rows = db.execute(
@@ -107,8 +107,12 @@ def index():
         )
 
     recent_workouts = db.execute(
-        """SELECT * FROM workouts WHERE user_id = ?
-           ORDER BY workout_date DESC, id DESC LIMIT 5""",
+        """SELECT s.*, d.name AS day_name, w.name AS workout_name, w.workout_type
+           FROM workout_sessions s
+           LEFT JOIN workout_days d ON d.id = s.workout_day_id
+           LEFT JOIN workouts w ON w.id = d.workout_id
+           WHERE s.user_id = ?
+           ORDER BY s.performed_date DESC, s.id DESC LIMIT 5""",
         (uid,),
     ).fetchall()
     recent_meals = db.execute(

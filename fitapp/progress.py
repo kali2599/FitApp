@@ -49,10 +49,17 @@ def current_value(db, user_id, goal):
 
     matches = " OR ".join("LOWER(e.name) LIKE ?" for _ in keywords)
     params = [f"%{word}%" for word in keywords]
+    maxable = {"reps", "weight_kg", "duration_min", "duration_sec"}
+    if column in maxable:
+        value_expr = (
+            f"MAX(CASE WHEN e.{column} GLOB '*[a-zA-Z]*' THEN NULL ELSE e.{column} END)"
+        )
+    else:
+        value_expr = f"{aggregate}(e.{column})"
     row = db.execute(
-        f"SELECT {aggregate}(e.{column}) AS value FROM exercises e "
-        "JOIN workouts w ON w.id = e.workout_id "
-        f"WHERE w.user_id = ? AND ({matches}) AND e.{column} IS NOT NULL",
+        f"SELECT {value_expr} AS value FROM session_entries e "
+        "JOIN workout_sessions s ON s.id = e.session_id "
+        f"WHERE s.user_id = ? AND ({matches}) AND e.{column} IS NOT NULL",
         [user_id, *params],
     ).fetchone()
     if row and row["value"] is not None:

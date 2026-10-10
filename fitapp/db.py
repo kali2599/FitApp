@@ -22,21 +22,72 @@ CREATE TABLE IF NOT EXISTS workouts (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     name         TEXT NOT NULL,
-    workout_type TEXT NOT NULL,
-    workout_date TEXT NOT NULL,
-    duration_min INTEGER,
-    calories     REAL,
-    notes        TEXT
+    workout_type TEXT NOT NULL CHECK (workout_type IN ('strength', 'cardio', 'hybrid')),
+    notes        TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS exercises (
+CREATE TABLE IF NOT EXISTS workout_days (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     workout_id INTEGER NOT NULL REFERENCES workouts (id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL DEFAULT 0,
     name       TEXT NOT NULL,
-    sets       INTEGER,
-    reps       INTEGER,
-    weight_kg  REAL,
-    position   INTEGER NOT NULL DEFAULT 0
+    focus      TEXT,
+    notes      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS circuits (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    workout_day_id INTEGER NOT NULL REFERENCES workout_days (id) ON DELETE CASCADE,
+    position      INTEGER NOT NULL DEFAULT 0,
+    label         TEXT NOT NULL,
+    rounds        INTEGER NOT NULL DEFAULT 3,
+    rest_sec      INTEGER NOT NULL DEFAULT 60
+);
+
+CREATE TABLE IF NOT EXISTS day_exercises (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    workout_day_id INTEGER NOT NULL REFERENCES workout_days (id) ON DELETE CASCADE,
+    circuit_id    INTEGER REFERENCES circuits (id) ON DELETE CASCADE,
+    position      INTEGER NOT NULL DEFAULT 0,
+    kind          TEXT NOT NULL CHECK (kind IN ('strength', 'cardio')),
+    name          TEXT NOT NULL,
+    sets          INTEGER,
+    reps          INTEGER,
+    metric        TEXT CHECK (metric IN ('weight', 'duration')),
+    weight_kg     REAL,
+    duration_sec  INTEGER,
+    duration_min  REAL,
+    distance_km   REAL,
+    rest_sec      INTEGER,
+    notes         TEXT
+);
+
+CREATE TABLE IF NOT EXISTS workout_sessions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id       INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    workout_day_id INTEGER REFERENCES workout_days (id) ON DELETE SET NULL,
+    performed_date TEXT NOT NULL,
+    duration_min  INTEGER,
+    calories      REAL,
+    notes         TEXT,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS session_entries (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id    INTEGER NOT NULL REFERENCES workout_sessions (id) ON DELETE CASCADE,
+    kind          TEXT NOT NULL,
+    name          TEXT NOT NULL,
+    circuit_label TEXT,
+    sets          INTEGER,
+    reps          INTEGER,
+    metric        TEXT,
+    weight_kg     REAL,
+    duration_sec  INTEGER,
+    duration_min  REAL,
+    distance_km   REAL,
+    position      INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS diets (
@@ -80,11 +131,15 @@ CREATE TABLE IF NOT EXISTS goals (
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_workouts_user ON workouts (user_id, workout_date);
+CREATE INDEX IF NOT EXISTS idx_workouts_user ON workouts (user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_days_workout ON workout_days (workout_id, position);
+CREATE INDEX IF NOT EXISTS idx_circuits_day ON circuits (workout_day_id, position);
+CREATE INDEX IF NOT EXISTS idx_exercises_day ON day_exercises (workout_day_id, position);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON workout_sessions (user_id, performed_date);
+CREATE INDEX IF NOT EXISTS idx_session_entries ON session_entries (session_id, position);
 CREATE INDEX IF NOT EXISTS idx_diets_user ON diets (user_id, diet_date);
 CREATE INDEX IF NOT EXISTS idx_stats_user ON body_stats (user_id, stat_date);
 CREATE INDEX IF NOT EXISTS idx_goals_user ON goals (user_id, status);
-CREATE INDEX IF NOT EXISTS idx_exercises_workout ON exercises (workout_id, position);
 """
 
 

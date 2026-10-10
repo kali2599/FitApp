@@ -4,68 +4,68 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h3 mb-1">Workouts</h1>
-    <p class="text-muted mb-0">{{ workouts|length }} workout{{ 's' if workouts|length != 1 }} logged</p>
+    <p class="text-muted mb-0">{{ workouts|length }} workout program{{ 's' if workouts|length != 1 }}</p>
   </div>
-  <a class="btn btn-success" href="{{ url_for('workouts.new') }}"><i class="bi bi-plus-lg me-1"></i>New workout</a>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-success" href="{{ url_for('workouts.sessions') }}">
+      <i class="bi bi-clock-history me-1"></i>Sessions
+    </a>
+    <a class="btn btn-success" href="{{ url_for('workouts.new') }}">
+      <i class="bi bi-plus-lg me-1"></i>New workout
+    </a>
+  </div>
 </div>
 
-{% for w in workouts %}
-<div class="card shadow-sm border-0 mb-3">
-  <div class="card-body">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
-      <div>
-        <h2 class="h5 mb-1">{{ w['name'] }}</h2>
-        <div class="text-muted small">
-          <i class="bi bi-calendar3 me-1"></i>{{ w['workout_date'] }}
-          &middot; <span class="badge text-bg-light border">{{ w['workout_type'] }}</span>
-          {% if w['duration_min'] %}&middot; {{ w['duration_min'] }} min{% endif %}
-          {% if w['calories'] %}&middot; {{ w['calories']|int }} kcal{% endif %}
-          &middot; {{ w['exercise_count'] }} exercise{{ 's' if w['exercise_count'] != 1 }}
+<div class="row g-3">
+  {% for w in workouts %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <span class="badge
+            {% if w['workout_type'] == 'strength' %}text-bg-primary
+            {% elif w['workout_type'] == 'cardio' %}text-bg-danger
+            {% else %}text-bg-dark{% endif %}">
+            {{ w['workout_type'] }}
+          </span>
+          <div class="btn-group">
+            <a class="btn btn-sm btn-outline-success" href="{{ url_for('workouts.edit', workout_id=w['id']) }}">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form class="d-inline" action="{{ url_for('workouts.delete', workout_id=w['id']) }}" method="post"
+                  onsubmit="return confirm('Delete this workout and all its modules?');">
+              <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
         </div>
-        {% if w['notes'] %}<p class="small mt-2 mb-0">{{ w['notes'] }}</p>{% endif %}
+        <h2 class="h5 mb-1">
+          <a class="text-decoration-none" href="{{ url_for('workouts.detail', workout_id=w['id']) }}">{{ w['name'] }}</a>
+        </h2>
+        {% if w['notes'] %}<p class="small text-muted mb-2">{{ w['notes'] }}</p>{% endif %}
+        <div class="small text-muted">
+          <i class="bi bi-calendar-week me-1"></i>{{ w['day_count'] }} module{{ 's' if w['day_count'] != 1 }}
+          &middot; <i class="bi bi-list-check me-1"></i>{{ w['exercise_count'] }} exercise{{ 's' if w['exercise_count'] != 1 }}
+          &middot; <i class="bi bi-check2-circle me-1"></i>{{ w['session_count'] }} logged
+        </div>
       </div>
-      <div class="btn-group">
-        <a class="btn btn-sm btn-outline-success" href="{{ url_for('workouts.edit', workout_id=w['id']) }}">
-          <i class="bi bi-pencil me-1"></i>Edit
+      <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+        <small class="text-muted">Created {{ w['created_at'][:10] }}</small>
+        <a class="btn btn-sm btn-success" href="{{ url_for('workouts.detail', workout_id=w['id']) }}">
+          Open builder <i class="bi bi-arrow-right ms-1"></i>
         </a>
-        <form action="{{ url_for('workouts.delete', workout_id=w['id']) }}" method="post"
-              onsubmit="return confirm('Delete this workout and its exercises?');">
-          <button class="btn btn-sm btn-outline-danger" type="submit">
-            <i class="bi bi-trash me-1"></i>Delete
-          </button>
-        </form>
       </div>
     </div>
-
-    {% if exercises_by_workout.get(w['id']) %}
-    <details class="mt-3">
-      <summary class="small text-muted">Exercises</summary>
-      <table class="table table-sm mt-2 mb-0 align-middle">
-        <thead class="table-light">
-          <tr><th>Exercise</th><th class="text-end">Sets</th><th class="text-end">Reps</th><th class="text-end">Weight</th></tr>
-        </thead>
-        <tbody>
-          {% for e in exercises_by_workout[w['id']] %}
-          <tr>
-            <td>{{ e['name'] }}</td>
-            <td class="text-end">{{ e['sets'] if e['sets'] is not none else '—' }}</td>
-            <td class="text-end">{{ e['reps'] if e['reps'] is not none else '—' }}</td>
-            <td class="text-end">{{ e['weight_kg'] ~ ' kg' if e['weight_kg'] is not none else '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </details>
-    {% endif %}
   </div>
-</div>
-{% else %}
-<div class="card shadow-sm border-0">
-  <div class="card-body text-center py-5">
-    <i class="bi bi-emoji-heart-eyes display-4 icon-grad"></i>
-    <p class="mt-3 mb-2">No workouts logged yet.</p>
-    <a class="btn btn-success" href="{{ url_for('workouts.new') }}">Add your first workout</a>
+  {% else %}
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-lightning-charge-fill display-4 icon-grad"></i>
+        <p class="mt-3 mb-2">No workouts yet. Create a program and build its modules.</p>
+        <a class="btn btn-success" href="{{ url_for('workouts.new') }}">Create your first workout</a>
+      </div>
+    </div>
   </div>
+  {% endfor %}
 </div>
-{% endfor %}
 {% endblock %}

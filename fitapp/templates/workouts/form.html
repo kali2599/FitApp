@@ -2,98 +2,45 @@
 {% block title %}{{ 'Edit workout' if editing else 'New workout' }}{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-9">
+  <div class="col-lg-7">
     <div class="card shadow-sm border-0">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold">
-          <i class="bi bi-emoji-heart-eyes me-2"></i>{{ 'Edit workout' if editing else 'New workout' }}
+          <i class="bi bi-lightning-charge-fill me-2"></i>{{ 'Edit workout' if editing else 'New workout' }}
         </span>
         <a class="small" href="{{ url_for('workouts.index') }}">Back to workouts</a>
       </div>
       <div class="card-body">
         <form method="post" novalidate>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label" for="name">Workout name *</label>
-              <input class="form-control" id="name" name="name" type="text"
-                     value="{{ workout['name'] or '' }}" placeholder="Push day, Morning run..." required>
-            </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label" for="workout_type">Type *</label>
-              <select class="form-select" id="workout_type" name="workout_type" required>
-                <option value="">Choose...</option>
-                {% for t in types %}
-                <option value="{{ t }}" {% if workout['workout_type'] == t %}selected{% endif %}>{{ t }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label" for="workout_date">Date *</label>
-              <input class="form-control" id="workout_date" name="workout_date" type="date"
-                     value="{{ workout['workout_date'] or '' }}" required>
+          <div class="mb-3">
+            <label class="form-label" for="name">Workout name *</label>
+            <input class="form-control" id="name" name="name" type="text"
+                   value="{{ workout['name'] or '' }}" placeholder="e.g. Upper / Lower Split" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="workout_type">Workout type *</label>
+            <select class="form-select" id="workout_type" name="workout_type" required>
+              <option value="">Choose...</option>
+              {% for t in types %}
+              <option value="{{ t }}" {% if workout['workout_type'] == t %}selected{% endif %}>
+                {{ t.capitalize() }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              <strong>Strength</strong>: sets, reps, weight/duration, rest and mini-circuits.
+              <strong>Cardio</strong>: run, swimming or spinning by duration.
+              <strong>Hybrid</strong>: mix strength and cardio within a module.
             </div>
           </div>
-          <div class="row">
-            <div class="col-md-3 mb-3">
-              <label class="form-label" for="duration_min">Duration (min)</label>
-              <input class="form-control" id="duration_min" name="duration_min" type="number"
-                     min="0" max="1440" value="{{ workout['duration_min'] if workout['duration_min'] is not none else '' }}">
-            </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label" for="calories">Calories burned</label>
-              <input class="form-control" id="calories" name="calories" type="number"
-                     min="0" step="1" value="{{ workout['calories'] if workout['calories'] is not none else '' }}">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label" for="notes">Notes</label>
-              <input class="form-control" id="notes" name="notes" type="text"
-                     value="{{ workout['notes'] or '' }}" placeholder="How did it feel?">
-            </div>
+          <div class="mb-3">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2"
+                      placeholder="Goal of the program, schedule...">{{ workout['notes'] or '' }}</textarea>
           </div>
-
-          <hr>
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <label class="form-label mb-0 fw-semibold">Exercises</label>
-            <button class="btn btn-sm btn-outline-success" type="button" id="addExercise">
-              <i class="bi bi-plus-lg me-1"></i>Add exercise
-            </button>
-          </div>
-          <div class="d-none d-md-flex small text-muted mb-2">
-            <div class="col-md-4 px-1">Name</div>
-            <div class="col-md-2 px-1">Sets</div>
-            <div class="col-md-2 px-1">Reps</div>
-            <div class="col-md-3 px-1">Weight (kg)</div>
-            <div class="col-md-1 px-1"></div>
-          </div>
-          <div id="exerciseRows">
-            {% for e in exercises %}
-            <div class="exercise-row row g-2 align-items-center mb-2">
-              <div class="col-6 col-md-4 px-1">
-                <input class="form-control form-control-sm" name="ex_name" type="text"
-                       value="{{ e['name'] }}" placeholder="Bench press">
-              </div>
-              <div class="col-3 col-md-2 px-1">
-                <input class="form-control form-control-sm" name="ex_sets" type="number" min="1" max="500"
-                       value="{{ e['sets'] if e['sets'] is not none else '' }}">
-              </div>
-              <div class="col-3 col-md-2 px-1">
-                <input class="form-control form-control-sm" name="ex_reps" type="number" min="1" max="1000"
-                       value="{{ e['reps'] if e['reps'] is not none else '' }}">
-              </div>
-              <div class="col-6 col-md-3 px-1">
-                <input class="form-control form-control-sm" name="ex_weight" type="number" min="0" step="0.5"
-                       value="{{ e['weight_kg'] if e['weight_kg'] is not none else '' }}">
-              </div>
-              <div class="col-6 col-md-1 px-1 text-end">
-                <button class="btn btn-sm btn-outline-danger remove-row" type="button" title="Remove">&times;</button>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-
-          <div class="mt-3 d-flex gap-2">
+          <div class="d-flex gap-2">
             <button class="btn btn-success" type="submit">
-              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Add workout' }}
+              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Create workout' }}
             </button>
             <a class="btn btn-outline-secondary" href="{{ url_for('workouts.index') }}">Cancel</a>
           </div>
@@ -102,42 +49,4 @@
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  const rows = document.getElementById('exerciseRows');
-  const template = () => `
-    <div class="exercise-row row g-2 align-items-center mb-2">
-      <div class="col-6 col-md-4 px-1">
-        <input class="form-control form-control-sm" name="ex_name" type="text" placeholder="Bench press">
-      </div>
-      <div class="col-3 col-md-2 px-1">
-        <input class="form-control form-control-sm" name="ex_sets" type="number" min="1" max="500">
-      </div>
-      <div class="col-3 col-md-2 px-1">
-        <input class="form-control form-control-sm" name="ex_reps" type="number" min="1" max="1000">
-      </div>
-      <div class="col-6 col-md-3 px-1">
-        <input class="form-control form-control-sm" name="ex_weight" type="number" min="0" step="0.5">
-      </div>
-      <div class="col-6 col-md-1 px-1 text-end">
-        <button class="btn btn-sm btn-outline-danger remove-row" type="button" title="Remove">&times;</button>
-      </div>
-    </div>`;
-
-  document.getElementById('addExercise').addEventListener('click', () => {
-    rows.insertAdjacentHTML('beforeend', template());
-  });
-
-  rows.addEventListener('click', (event) => {
-    if (event.target.classList.contains('remove-row')) {
-      event.target.closest('.exercise-row').remove();
-    }
-  });
-
-  if (!rows.querySelector('.exercise-row')) {
-    rows.insertAdjacentHTML('beforeend', template());
-  }
-</script>
 {% endblock %}

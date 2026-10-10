@@ -170,13 +170,15 @@
             {% for w in recent_workouts %}
             <li class="list-group-item d-flex justify-content-between align-items-center py-2">
               <span>
-                <a href="{{ url_for('workouts.edit', workout_id=w['id']) }}" class="text-decoration-none">{{ w['name'] }}</a>
-                <br><span class="small text-muted">{{ w['workout_date'] }} &middot; {{ w['workout_type'] }}</span>
+                <a href="{{ url_for('workouts.session_edit', session_id=w['id']) }}" class="text-decoration-none">
+                  {{ w['workout_name'] or 'Session' }}{% if w['day_name'] %} · {{ w['day_name'] }}{% endif %}
+                </a>
+                <br><span class="small text-muted">{{ w['performed_date'] }}{% if w['workout_type'] %} · {{ w['workout_type'] }}{% endif %}</span>
               </span>
               <span class="badge bg-success-subtle text-success border border-success-subtle">{{ w['duration_min'] or '?' }} min</span>
             </li>
             {% else %}
-            <li class="list-group-item text-muted small">No workouts yet.</li>
+            <li class="list-group-item text-muted small">No workouts logged yet.</li>
             {% endfor %}
           </ul>
         </div>
