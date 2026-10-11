@@ -36,6 +36,10 @@
            href="{{ url_for('stats.index') }}"><i class="bi bi-rulers me-1"></i>Body stats</a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('profile.') %}active{% endif %}"
            href="{{ url_for('profile.index') }}"><i class="bi bi-person-circle me-1"></i>Profile</a></li>
+        {% if g.user['role'] == 'admin' %}
+        <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('admin.') %}active{% endif %}"
+           href="{{ url_for('admin.index') }}"><i class="bi bi-shield-lock me-1"></i>Admin</a></li>
+        {% endif %}
       </ul>
       <div class="d-flex align-items-center">
         <span class="navbar-text me-3 text-white-50">Hi, {{ g.user['username'] }}</span>

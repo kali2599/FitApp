@@ -6,7 +6,7 @@
     <div class="d-flex align-items-center gap-2">
       <h1 class="h3 mb-0">{{ workout['name'] }}</h1>
       <span class="badge
-        {% if workout['workout_type'] == 'strength' %}text-bg-primary
+        {% if workout['workout_type'] == 'gym' %}text-bg-primary
         {% elif workout['workout_type'] == 'cardio' %}text-bg-danger
         {% else %}text-bg-dark{% endif %}">{{ workout['workout_type'] }}</span>
     </div>

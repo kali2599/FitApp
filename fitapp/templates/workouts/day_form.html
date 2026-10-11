@@ -9,7 +9,7 @@
           <i class="bi bi-calendar-day me-2"></i>
           {{ 'Edit workout-module' if day_id else 'Add workout-module' }}
           <span class="badge
-            {% if workout['workout_type'] == 'strength' %}text-bg-primary
+            {% if workout['workout_type'] == 'gym' %}text-bg-primary
             {% elif workout['workout_type'] == 'cardio' %}text-bg-danger
             {% else %}text-bg-dark{% endif %} ms-1">{{ workout['workout_type'] }}</span>
         </span>
@@ -71,6 +71,7 @@
 
 {% block scripts %}
 <script>
+  const CATALOG = {{ catalog|tojson }};
   const INITIAL = {{ data|tojson }};
   const WORKOUT_TYPE = {{ workout['workout_type']|tojson }};
   const ACTIVITIES = ['run', 'swimming', 'spinning'];
@@ -94,7 +95,7 @@
   }[ch]));
 
   function kindLocked() {
-    if (WORKOUT_TYPE === 'strength') return 'strength';
+    if (WORKOUT_TYPE === 'gym') return 'gym';
     if (WORKOUT_TYPE === 'cardio') return 'cardio';
     return null;
   }
@@ -131,23 +132,69 @@
     return opts.join('');
   }
 
+  function pickerOptions(kind) {
+    const opts = [];
+    if (kind === 'cardio') {
+      ACTIVITIES.forEach(a => opts.push({ value: a, label: a }));
+      ((CATALOG && CATALOG.cardio) || []).forEach(a => {
+        if (!opts.some(o => o.value.toLowerCase() === a.toLowerCase())) {
+          opts.push({ value: a, label: a });
+        }
+      });
+    } else {
+      ((CATALOG && CATALOG.gym) || []).forEach(g => {
+        opts.push({ value: g.name, label: g.subcategory ? `${g.name} (${g.subcategory})` : g.name });
+      });
+    }
+    return opts;
+  }
+
+  function namePicker(e, kind) {
+    const opts = pickerOptions(kind);
+    const name = String(e.name || '');
+    const lower = name.toLowerCase();
+    const known = opts.some(o => o.value.toLowerCase() === lower);
+    const customMode = !!name && !known;
+
+    let options = '<option value="">Choose from the catalog&#8230;</option>';
+    opts.forEach(o => {
+      const sel = known && o.value.toLowerCase() === lower ? ' selected' : '';
+      options += `<option value="${esc(o.value)}"${sel}>${esc(o.label)}</option>`;
+    });
+    options += `<option value="__custom__"${customMode ? ' selected' : ''}>&#9998; Write your own&#8230;</option>`;
+
+    return `<div class="exercise-picker">
+      <select class="form-select form-select-sm ex-picker" name="ex_name"${customMode ? ' disabled' : ''}>${options}</select>
+      <div class="input-group input-group-sm ex-custom${customMode ? '' : ' d-none'}">
+        <input class="form-control" name="ex_name_custom" placeholder="Custom exercise" value="${esc(name)}">
+        <button class="btn btn-outline-secondary lh-1" type="button" data-back-to-menu
+                title="Back to the catalog" aria-label="Back to the catalog">&larr;</button>
+      </div>
+    </div>`;
+  }
+
   function exerciseRow(e, i) {
     const locked = kindLocked();
-    const kind = locked || e.kind || 'strength';
+    const kind = locked || e.kind || 'gym';
     const inCircuit = !!e.circuit;
+    const showKind = !locked || kind === 'cardio';
+    let nameW = 4;
     let fields = '';
 
-    if (kind === 'strength') {
+    if (kind === 'gym') {
+      nameW = showKind ? 2 : 3;
+      const repsW = inCircuit ? 2 : 1;
+      const durW = inCircuit ? 2 : 1;
       fields += inCircuit
         ? `<input type="hidden" name="ex_sets" value="">`
         : `
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-1">
           <label class="form-label small mb-1">Sets</label>
           <input class="form-control form-control-sm" name="ex_sets" type="number" min="1" max="100"
                  value="${esc(e.sets)}">
         </div>`;
       fields += `
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-${repsW}">
           <label class="form-label small mb-1">Reps</label>
           <input class="form-control form-control-sm" name="ex_reps" type="text" inputmode="numeric"
                  placeholder="8 or max" value="${esc(e.reps)}">
@@ -157,7 +204,7 @@
           <input class="form-control form-control-sm" name="ex_weight"
                  type="text" inputmode="decimal" value="${esc(e.weight)}" placeholder="80 or max">
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-${durW}">
           <label class="form-label small mb-1">Duration (s)</label>
           <input class="form-control form-control-sm" name="ex_duration"
                  type="text" inputmode="numeric" value="${esc(e.duration)}" placeholder="60 or max">
@@ -167,7 +214,7 @@
                    <input type="hidden" name="ex_rest" value="">`;
       } else {
         fields += `<input type="hidden" name="ex_distance" value="">
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-1">
           <label class="form-label small mb-1">Rest (s)</label>
           <input class="form-control form-control-sm" name="ex_rest" type="number" min="0" max="3600" value="${esc(e.rest)}">
         </div>`;
@@ -188,26 +235,23 @@
         <input type="hidden" name="ex_rest" value="">`;
     }
 
-    const nameField = kind === 'cardio'
-      ? `<select class="form-select form-select-sm" name="ex_name">
-           ${ACTIVITIES.map(a => `<option value="${a}" ${e.name === a ? 'selected' : ''}>${a}</option>`).join('')}
-         </select>`
-      : `<input class="form-control form-control-sm" name="ex_name" value="${esc(e.name)}" placeholder="Bench press">`;
+    const nameField = namePicker(e, kind);
 
-    const kindField = locked
-      ? `<input type="hidden" name="ex_kind" value="${kind}">
-         <span class="badge ${kind === 'cardio' ? 'text-bg-danger' : 'text-bg-primary'}">${kind}</span>`
+    const kindVisible = locked
+      ? (kind === 'cardio' ? `<span class="badge text-bg-danger">${kind}</span>` : '')
       : `<select class="form-select form-select-sm" name="ex_kind">
-           <option value="strength" ${kind === 'strength' ? 'selected' : ''}>Strength</option>
+           <option value="gym" ${kind === 'gym' ? 'selected' : ''}>Gym</option>
            <option value="cardio" ${kind === 'cardio' ? 'selected' : ''}>Cardio</option>
          </select>`;
+    const kindHidden = locked ? `<input type="hidden" name="ex_kind" value="${kind}">` : '';
+    const kindCol = showKind ? `<div class="col-6 col-md-1">${kindVisible}</div>` : '';
 
     return `
       <div class="card mb-2 exercise-card" data-eidx="${i}">
         <div class="card-body py-2">
           <div class="row g-2 align-items-end">
-            <div class="col-6 col-md-1">${kindField}</div>
-            <div class="col-6 col-md-2">${nameField}</div>
+            ${kindHidden}${kindCol}
+            <div class="col-6 col-md-${nameW}">${nameField}</div>
             ${fields}
             <div class="col-8 col-md-2">
               <label class="form-label small mb-1">Circuit</label>
@@ -242,7 +286,13 @@
       if (!exercises[i]) return;
       const get = (n) => { const el = row.querySelector('[name=' + n + ']'); return el ? el.value : ''; };
       const e = exercises[i];
-      e.name = get('ex_name');
+      e.kind = get('ex_kind') || e.kind;
+      const customEl = row.querySelector('.ex-custom');
+      if (customEl && !customEl.classList.contains('d-none')) {
+        e.name = customEl.querySelector('input').value.trim();
+      } else {
+        e.name = get('ex_name');
+      }
       e.sets = get('ex_sets');
       e.reps = get('ex_reps');
       e.weight = get('ex_weight');
@@ -262,7 +312,7 @@
   document.getElementById('addExercise').addEventListener('click', () => {
     syncFromDom();
     const locked = kindLocked();
-    exercises.push({ kind: locked || 'strength', name: '', sets: '', reps: '',
+    exercises.push({ kind: locked || 'gym', name: '', sets: '', reps: '',
                      weight: '', duration: '', distance: '', rest: '', circuit: '' });
     renderExercises();
   });
@@ -274,14 +324,43 @@
     renderCircuits(); renderExercises();
   });
 
+  function enterCustom(row) {
+    const picker = row.querySelector('.exercise-picker');
+    const sel = picker.querySelector('.ex-picker');
+    const custom = picker.querySelector('.ex-custom');
+    sel.value = '__custom__';
+    sel.disabled = true;
+    custom.classList.remove('d-none');
+    custom.querySelector('input').focus();
+  }
+
+  function backToMenu(row) {
+    const picker = row.querySelector('.exercise-picker');
+    const sel = picker.querySelector('.ex-picker');
+    const custom = picker.querySelector('.ex-custom');
+    custom.classList.add('d-none');
+    custom.querySelector('input').value = '';
+    sel.disabled = false;
+    sel.value = '';
+  }
+
   exerciseEl.addEventListener('click', (ev) => {
-    if (!ev.target.classList.contains('remove-exercise')) return;
-    syncFromDom();
-    exercises.splice(Number(ev.target.closest('[data-eidx]').dataset.eidx), 1);
-    renderExercises();
+    if (ev.target.classList.contains('remove-exercise')) {
+      syncFromDom();
+      exercises.splice(Number(ev.target.closest('[data-eidx]').dataset.eidx), 1);
+      renderExercises();
+      return;
+    }
+    if (ev.target.closest('[data-back-to-menu]')) {
+      backToMenu(ev.target.closest('[data-eidx]'));
+    }
   });
 
   exerciseEl.addEventListener('change', (ev) => {
+    if (ev.target.classList.contains('ex-picker') && ev.target.value === '__custom__') {
+      enterCustom(ev.target.closest('[data-eidx]'));
+      return;
+    }
     if (ev.target.name === 'ex_kind' || ev.target.name === 'ex_circuit') {
       syncFromDom();
       renderExercises();
@@ -298,6 +377,22 @@
     if (!weight || !duration) return;
     if (ev.target === weight && weight.value !== '') duration.value = '';
     else if (ev.target === duration && duration.value !== '') weight.value = '';
+  });
+
+  // serialize a custom exercise under the real ex_name field on submit
+  document.getElementById('dayForm').addEventListener('submit', () => {
+    exerciseEl.querySelectorAll('[data-eidx]').forEach(row => {
+      const custom = row.querySelector('.ex-custom');
+      if (!custom || custom.classList.contains('d-none')) return;
+      const sel = row.querySelector('.ex-picker');
+      const input = custom.querySelector('input');
+      sel.name = '';
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'ex_name';
+      hidden.value = input.value;
+      custom.appendChild(hidden);
+    });
   });
 
   renderCircuits();

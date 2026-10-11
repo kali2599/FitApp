@@ -15,7 +15,7 @@ from ..utils import to_date, to_float, to_int
 
 bp = Blueprint("workouts", __name__, url_prefix="/workouts")
 
-WORKOUT_TYPES = ["strength", "cardio", "hybrid"]
+WORKOUT_TYPES = ["gym", "cardio", "hybrid"]
 CARDIO_ACTIVITIES = ["run", "swimming", "spinning"]
 
 
@@ -40,6 +40,28 @@ def _get_day(workout_id, day_id):
     if day is None:
         abort(404)
     return day
+
+
+def _catalog(db):
+    return db.execute(
+        "SELECT name, category, subcategory FROM exercises "
+        "ORDER BY category, name COLLATE NOCASE"
+    ).fetchall()
+
+
+def _catalog_split(db):
+    entries = _catalog(db)
+    gym = [
+        {"name": e["name"], "subcategory": e["subcategory"]}
+        for e in entries if e["category"] == "gym"
+    ]
+    cardio = [e["name"] for e in entries if e["category"] == "cardio"]
+    return {"gym": gym, "cardio": cardio}
+
+
+def _catalog_cardio_names():
+    db = get_db()
+    return {row["name"].lower() for row in _catalog(db) if row["category"] == "cardio"}
 
 
 def _parse_num(value, conv, label, errors, **kwargs):
@@ -71,7 +93,7 @@ def _parse_plan_form():
     if not data["name"]:
         errors.append("Workout name is required.")
     if data["workout_type"] not in WORKOUT_TYPES:
-        errors.append("Choose a workout type (strength, cardio or hybrid).")
+        errors.append("Choose a workout type (gym, cardio or hybrid).")
     return data, errors
 
 
@@ -122,7 +144,7 @@ def _parse_day_form(workout_type):
     exercises = []
     members = {}
     for i, kind in enumerate(kinds):
-        if kind not in ("strength", "cardio"):
+        if kind not in ("gym", "cardio"):
             continue
         name = (names[i] if i < len(names) else "").strip()
         row = {
@@ -136,11 +158,11 @@ def _parse_day_form(workout_type):
             row["circuit_index"] = key_to_index[circuit_key]
             members[row["circuit_index"]] = members.get(row["circuit_index"], 0) + 1
 
-        if kind == "strength":
+        if kind == "gym":
             if workout_type == "cardio":
-                errors.append(f"'{name or 'Strength exercise'}': cardio workouts cannot contain strength exercises.")
+                errors.append(f"'{name or 'Gym exercise'}': cardio workouts cannot contain gym exercises.")
             if not name:
-                errors.append("Every strength exercise needs a name.")
+                errors.append("Every gym exercise needs a name.")
             row["reps"] = _parse_reps(
                 reps_l[i] if i < len(reps_l) else "", f"'{name}'", errors,
             )
@@ -165,10 +187,10 @@ def _parse_day_form(workout_type):
                 errors.append(f"'{name}': use weight or duration, not both.")
             row["metric"] = "duration" if row["duration_sec"] is not None else "weight"
         else:  # cardio
-            if workout_type == "strength":
-                errors.append(f"'{name or 'Cardio activity'}': strength workouts cannot contain cardio.")
-            if name not in CARDIO_ACTIVITIES:
-                errors.append("Cardio activity must be run, swimming or spinning.")
+            if workout_type == "gym":
+                errors.append(f"'{name or 'Cardio activity'}': gym workouts cannot contain cardio.")
+            if name not in CARDIO_ACTIVITIES and name.lower() not in _catalog_cardio_names():
+                errors.append("Cardio activity must be run, swimming, spinning or a stored cardio exercise.")
             row["duration_min"] = _parse_maxable(
                 durs[i] if i < len(durs) else "", to_float,
                 f"'{name or 'activity'}': duration", errors, minimum=0.1, maximum=1440,
@@ -420,14 +442,16 @@ def delete(workout_id):
 @bp.route("/<int:workout_id>/days/new", methods=("GET", "POST"))
 @login_required
 def day_new(workout_id):
-    workout = _get_workout(workout_id)
+    workflow = _get_workout(workout_id)
+    db = get_db()
     if request.method == "POST":
-        day, circuits, exercises, errors = _parse_day_form(workout["workout_type"])
+        day, circuits, exercises, errors = _parse_day_form(workflow["workout_type"])
         if errors:
             for error in errors:
                 flash(error, "danger")
             return render_template(
-                "workouts/day_form.html", workout=workout, day_id=None,
+                "workouts/day_form.html", workout=workflow, day_id=None,
+                catalog=_catalog_split(db),
                 data={"name": day["name"], "focus": day["focus"], "notes": day["notes"],
                       "circuits": circuits, "exercises": exercises},
             ), 400
@@ -436,7 +460,8 @@ def day_new(workout_id):
         return redirect(url_for("workouts.detail", workout_id=workout_id))
 
     return render_template(
-        "workouts/day_form.html", workout=workout, day_id=None,
+        "workouts/day_form.html", workout=workflow, day_id=None,
+        catalog=_catalog_split(db),
         data=_day_form_data(None),
     )
 
@@ -446,6 +471,7 @@ def day_new(workout_id):
 def day_edit(workout_id, day_id):
     workout = _get_workout(workout_id)
     day = _get_day(workout_id, day_id)
+    db = get_db()
     if request.method == "POST":
         data, circuits, exercises, errors = _parse_day_form(workout["workout_type"])
         if errors:
@@ -453,6 +479,7 @@ def day_edit(workout_id, day_id):
                 flash(error, "danger")
             return render_template(
                 "workouts/day_form.html", workout=workout, day_id=day_id,
+                catalog=_catalog_split(db),
                 data={"name": data["name"], "focus": data["focus"], "notes": data["notes"],
                       "circuits": circuits, "exercises": exercises},
             ), 400
@@ -462,6 +489,7 @@ def day_edit(workout_id, day_id):
 
     return render_template(
         "workouts/day_form.html", workout=workout, day_id=day_id,
+        catalog=_catalog_split(db),
         data=_day_form_data(day),
     )
 
@@ -545,7 +573,7 @@ def session_edit(session_id):
             entry_updates.append(
                 {
                     "id": entry_id,
-                    "kind": kinds_l[i] if i < len(kinds_l) else "strength",
+                    "kind": kinds_l[i] if i < len(kinds_l) else "gym",
                     "metric": metrics[i] if i < len(metrics) else "",
                     "sets": _parse_num(sets_l[i] if i < len(sets_l) else "", to_int,
                                        "Sets", errors, minimum=1, maximum=1000),

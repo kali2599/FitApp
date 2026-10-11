@@ -14,6 +14,13 @@
   </div>
 </div>
 
+{% if g.user['role'] == 'admin' %}
+<nav class="nav nav-pills admin-tabs mb-4">
+  <a class="nav-link" href="{{ url_for('admin.exercises') }}"><i class="bi bi-database me-1"></i>Exercises</a>
+  <a class="nav-link" href="{{ url_for('admin.index') }}"><i class="bi bi-people me-1"></i>Users</a>
+</nav>
+{% endif %}
+
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
     <div class="card stat-card accent-blue h-100">
@@ -189,7 +196,7 @@
                   <i class="bi bi-plus-circle me-1"></i>Log
                 </a>
                 <span class="text-muted">
-                  {% if item['current'] is not none %}{{ item['current'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }} / {% endif %}{{ goal['target_value'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }}
+                  {% if item['current'] is not none %}{{ item['current'] }}{{ goal['unit'] }} / {% endif %}{{ goal['target_value'] }}{{ goal['unit'] }}
                 </span>
               </span>
             </div>

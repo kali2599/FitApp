@@ -42,6 +42,20 @@ def login_required(view):
     return wrapped
 
 
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if load_current_user() is None:
+            flash("Please log in to access this page.", "warning")
+            return redirect(url_for("auth.login", next=request.path))
+        if g.user["role"] != "admin":
+            flash("You do not have permission to access that page.", "danger")
+            return redirect(url_for("dashboard.index"))
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
 @bp.before_app_request
 def _load_user():
     load_current_user()

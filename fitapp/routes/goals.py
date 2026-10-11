@@ -22,7 +22,7 @@ STATUSES = ["active", "achieved", "abandoned"]
 
 UNIT_BY_TYPE = {
     "body": ["kg", "%"],
-    "skill": ["seconds", "levels"],
+    "skill": ["seconds"],
     "strength": ["kg", "reps"],
 }
 NUMERIC_UNITS = {"kg", "%", "seconds", "reps"}
@@ -50,20 +50,26 @@ CATEGORY_SUGGESTIONS = {
 }
 
 
-def _skill_catalog(db):
-    skills = db.execute("SELECT DISTINCT skill FROM skill_levels ORDER BY skill").fetchall()
-    catalog = {}
-    for row in skills:
-        levels = db.execute(
-            "SELECT level, position, score FROM skill_levels "
-            "WHERE skill = ? ORDER BY position",
-            (row["skill"],),
-        ).fetchall()
-        catalog[row["skill"]] = [
-            {"level": l["level"], "position": l["position"], "score": l["score"]}
-            for l in levels
-        ]
-    return catalog
+def _catalog_exercises(db):
+    return db.execute(
+        "SELECT name, category, subcategory FROM exercises ORDER BY name COLLATE NOCASE"
+    ).fetchall()
+
+
+def _menu_catalog(db):
+    menu = {"strength": [], "skill": []}
+    for row in _catalog_exercises(db):
+        if row["category"] == "gym" and row["subcategory"] in menu:
+            menu[row["subcategory"]].append(row["name"])
+    return menu
+
+
+def _goal_suggestions(db):
+    suggestions = {key: list(values) for key, values in CATEGORY_SUGGESTIONS.items()}
+    for row in _catalog_exercises(db):
+        if row["category"] == "gym" and row["subcategory"] in suggestions:
+            suggestions[row["subcategory"]].append(row["name"])
+    return suggestions
 
 
 def _parse_form(db):
@@ -92,41 +98,16 @@ def _parse_form(db):
     except ValueError as exc:
         errors.append(f"Target date {exc}.")
 
-    if data["goal_type"] == "skill":
-        catalog = _skill_catalog(db)
-        if data["category"].lower() not in catalog:
-            errors.append("Pick a skill from the list.")
-
-    if data["unit"] == "levels":
-        catalog = _skill_catalog(db)
-        skill = data["category"].lower()
-        levels = [l["level"] for l in catalog.get(skill, [])]
-        if skill not in catalog:
-            errors.append("Pick a skill with defined levels.")
-        else:
-            data["start_value"] = request.form.get("start_value", "").strip()
-            data["target_value"] = request.form.get("target_value", "").strip()
-            if data["start_value"] not in levels:
-                errors.append("Pick a valid start level.")
-            if data["target_value"] not in levels:
-                errors.append("Pick a valid target level.")
-            if (
-                data["start_value"]
-                and data["target_value"]
-                and data["start_value"] == data["target_value"]
-            ):
-                errors.append("Start and target levels must differ.")
-    else:
-        try:
-            data["target_value"] = to_float(request.form.get("target_value"))
-        except ValueError as exc:
-            errors.append(f"Target value {exc}.")
-        if data["target_value"] is None:
-            errors.append("Target value is required.")
-        try:
-            data["start_value"] = to_float(request.form.get("start_value"))
-        except ValueError as exc:
-            errors.append(f"Start value {exc}.")
+    try:
+        data["target_value"] = to_float(request.form.get("target_value"))
+    except ValueError as exc:
+        errors.append(f"Target value {exc}.")
+    if data["target_value"] is None:
+        errors.append("Target value is required.")
+    try:
+        data["start_value"] = to_float(request.form.get("start_value"))
+    except ValueError as exc:
+        errors.append(f"Start value {exc}.")
     return data, errors
 
 
@@ -151,8 +132,8 @@ def _form_context(db, goal, editing, goal_id=None):
         "goal_types": GOAL_TYPES,
         "statuses": STATUSES,
         "unit_map": UNIT_BY_TYPE,
-        "suggestions": CATEGORY_SUGGESTIONS,
-        "skills": _skill_catalog(db),
+        "suggestions": _goal_suggestions(db),
+        "menu_catalog": _menu_catalog(db),
         "editing": editing,
         "goal_id": goal_id,
     }
@@ -312,24 +293,16 @@ def log(goal_id):
         abort(404)
 
     logs = _goal_logs(db, goal_id)
-    levels = _skill_catalog(db).get((goal["category"] or "").lower(), [])
     form = {"value": "", "logged_date": dt.date.today().isoformat(), "notes": ""}
 
     if request.method == "POST":
         errors = []
-        if goal["unit"] == "levels":
-            choice = request.form.get("value", "").strip()
-            valid = {l["level"] for l in levels}
-            if choice not in valid:
-                errors.append("Pick a valid level.")
-            form["value"] = choice
-        else:
-            try:
-                form["value"] = to_float(request.form.get("value"))
-            except ValueError as exc:
-                errors.append(f"Value {exc}.")
-            if form["value"] is None:
-                errors.append("Value is required.")
+        try:
+            form["value"] = to_float(request.form.get("value"))
+        except ValueError as exc:
+            errors.append(f"Value {exc}.")
+        if form["value"] is None:
+            errors.append("Value is required.")
         try:
             form["logged_date"] = to_date(request.form.get("logged_date"))
         except ValueError as exc:
@@ -342,7 +315,7 @@ def log(goal_id):
             for error in errors:
                 flash(error, "danger")
             return render_template(
-                "goals/log.html", goal=goal, logs=logs, form=form, levels=levels
+                "goals/log.html", goal=goal, logs=logs, form=form
             ), 400
 
         db.execute(
@@ -354,7 +327,7 @@ def log(goal_id):
         flash("Progress logged.", "success")
         return redirect(url_for("goals.index"))
 
-    return render_template("goals/log.html", goal=goal, logs=logs, form=form, levels=levels)
+    return render_template("goals/log.html", goal=goal, logs=logs, form=form)
 
 
 @bp.route("/<int:goal_id>/logs/<int:log_id>/delete", methods=("POST",))

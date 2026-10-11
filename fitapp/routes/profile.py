@@ -40,7 +40,7 @@ def _context():
                   MAX(s.performed_date) AS last_date
            FROM session_entries e
            JOIN workout_sessions s ON s.id = e.session_id
-           WHERE s.user_id = ? AND e.kind = 'strength'
+           WHERE s.user_id = ? AND e.kind = 'gym'
            GROUP BY LOWER(TRIM(e.name))
            HAVING best_weight IS NOT NULL OR best_reps IS NOT NULL
            ORDER BY best_weight DESC NULLS LAST, best_reps DESC

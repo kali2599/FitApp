@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     height_cm     REAL,
     birth_date    TEXT,
     sex           TEXT,
+    role          TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS workouts (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     name         TEXT NOT NULL,
-    workout_type TEXT NOT NULL CHECK (workout_type IN ('strength', 'cardio', 'hybrid')),
+    workout_type TEXT NOT NULL CHECK (workout_type IN ('gym', 'cardio', 'hybrid')),
     notes        TEXT,
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -50,7 +51,7 @@ CREATE TABLE IF NOT EXISTS day_exercises (
     workout_day_id INTEGER NOT NULL REFERENCES workout_days (id) ON DELETE CASCADE,
     circuit_id    INTEGER REFERENCES circuits (id) ON DELETE CASCADE,
     position      INTEGER NOT NULL DEFAULT 0,
-    kind          TEXT NOT NULL CHECK (kind IN ('strength', 'cardio')),
+    kind          TEXT NOT NULL CHECK (kind IN ('gym', 'cardio')),
     name          TEXT NOT NULL,
     sets          INTEGER,
     reps          INTEGER,
@@ -156,13 +157,15 @@ CREATE TABLE IF NOT EXISTS goal_logs (
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS skill_levels (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    skill    TEXT NOT NULL,
-    level    TEXT NOT NULL,
-    position INTEGER NOT NULL DEFAULT 0,
-    score    REAL NOT NULL,
-    UNIQUE (skill, level)
+CREATE TABLE IF NOT EXISTS exercises (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    category    TEXT NOT NULL CHECK (category IN ('gym', 'cardio')),
+    subcategory TEXT CHECK (subcategory IN ('strength', 'skill')),
+    name        TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    notes       TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK ((category = 'cardio' AND subcategory IS NULL)
+        OR (category = 'gym' AND subcategory IN ('strength', 'skill')))
 );
 
 CREATE INDEX IF NOT EXISTS idx_workouts_user ON workouts (user_id, created_at);
@@ -175,7 +178,6 @@ CREATE INDEX IF NOT EXISTS idx_diets_user ON diets (user_id, diet_date);
 CREATE INDEX IF NOT EXISTS idx_stats_user ON body_stats (user_id, stat_date);
 CREATE INDEX IF NOT EXISTS idx_goals_user ON goals (user_id, status);
 CREATE INDEX IF NOT EXISTS idx_goal_logs_goal ON goal_logs (goal_id, logged_date);
-CREATE INDEX IF NOT EXISTS idx_skill_levels ON skill_levels (skill, position);
 """
 
 
@@ -205,9 +207,93 @@ def _migrate_goals(db):
         db.execute("DROP TABLE IF EXISTS goals")
 
 
+def _migrate_workout_kinds(db):
+    """Rename the workout category 'strength' -> 'gym' for existing data."""
+    if db.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'session_entries'"
+    ).fetchone():
+        db.execute("UPDATE session_entries SET kind = 'gym' WHERE kind = 'strength'")
+        db.commit()
+
+    for table, kind_col in (("workouts", "workout_type"), ("day_exercises", "kind")):
+        row = db.execute(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)
+        ).fetchone()
+        if not (row and "'strength'" in (row["sql"] or "")):
+            continue
+        db.execute("PRAGMA foreign_keys = OFF")
+        try:
+            db.executescript(_rebuild_workout_table(table, kind_col))
+        finally:
+            db.execute("PRAGMA foreign_keys = ON")
+
+
+def _rebuild_workout_table(table, kind_col):
+    if kind_col == "workout_type":
+        return f"""
+        CREATE TABLE {table}_gym (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+            name         TEXT NOT NULL,
+            workout_type TEXT NOT NULL CHECK (workout_type IN ('gym', 'cardio', 'hybrid')),
+            notes        TEXT,
+            created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO {table}_gym (id, user_id, name, workout_type, notes, created_at)
+            SELECT id, user_id, name,
+                   CASE WHEN workout_type = 'strength' THEN 'gym' ELSE workout_type END,
+                   notes, created_at
+            FROM {table};
+        DROP TABLE {table};
+        ALTER TABLE {table}_gym RENAME TO {table};
+        """
+    return f"""
+    CREATE TABLE {table}_gym (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        workout_day_id INTEGER NOT NULL REFERENCES workout_days (id) ON DELETE CASCADE,
+        circuit_id     INTEGER REFERENCES circuits (id) ON DELETE CASCADE,
+        position       INTEGER NOT NULL DEFAULT 0,
+        kind           TEXT NOT NULL CHECK (kind IN ('gym', 'cardio')),
+        name           TEXT NOT NULL,
+        sets           INTEGER,
+        reps           INTEGER,
+        metric         TEXT CHECK (metric IN ('weight', 'duration')),
+        weight_kg      REAL,
+        duration_sec   INTEGER,
+        duration_min   REAL,
+        distance_km    REAL,
+        rest_sec       INTEGER,
+        notes          TEXT
+    );
+    INSERT INTO {table}_gym (
+            id, workout_day_id, circuit_id, position, kind, name, sets, reps,
+            metric, weight_kg, duration_sec, duration_min, distance_km, rest_sec, notes)
+        SELECT id, workout_day_id, circuit_id, position,
+               CASE WHEN kind = 'strength' THEN 'gym' ELSE kind END,
+               name, sets, reps, metric, weight_kg, duration_sec,
+               duration_min, distance_km, rest_sec, notes
+        FROM {table};
+    DROP TABLE {table};
+    ALTER TABLE {table}_gym RENAME TO {table};
+    """
+
+
+def _migrate_roles(db):
+    if not db.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'"
+    ).fetchone():
+        return
+    cols = db.execute("PRAGMA table_info(users)").fetchall()
+    if not any(col["name"] == "role" for col in cols):
+        db.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+        db.commit()
+
+
 def init_db():
     db = get_db()
     _migrate_goals(db)
+    _migrate_workout_kinds(db)
+    _migrate_roles(db)
     db.executescript(SCHEMA)
     db.commit()
 

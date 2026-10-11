@@ -19,13 +19,21 @@ A Flask web app for managing your personal fitness life: **workouts, diets, goal
 - **Diet** (`/diets`) — create / edit / delete meal entries with calories and macros
 - **Goals** (`/goals`) — goals in three categories (body, skill, strength) with
   automatic progress tracking; units are restricted per category (body: kg/%, skill:
-  seconds/levels, strength: kg/reps) and skill levels come from the `skill_levels` catalog
+  seconds, strength: kg/reps). Skill and strength goals pick their exercise from the
+  catalog (gym/skill and gym/strength respectively) or accept a custom name
 - **Body stats** (`/stats`) — weight, body fat and measurements over time. A
   **lifestyle profile** (sessions/week, intensity, activity level, sleep, daily
   calories, goal direction, water, stress) powers a **Body insights** report with
   BMI, BMR (Mifflin–St Jeor), TDEE, calorie & macro targets, and personalised
   diet / training / recovery suggestions. A compact version of the report also
   appears on the dashboard
+- **Exercise catalog** — admins maintain a shared catalog (`/admin/exercises`);
+  gym exercises carry a strength/skill subcategory, cardio exercises none. When
+  building a workout-day (or a strength goal) you can pick from the catalog or
+  type your own exercise. Cardio days also accept catalog cardio entries
+- **Admin** (`/admin`) — created **only via the CLI**, admins can view every
+  user's data (workouts, sessions, goals, measurements, meals), manage the
+  exercise catalog, and reset the password of normal users from the GUI
 
 All data is private per user and stored in a local SQLite database
 (`instance/fitapp.db`, auto-created on first run).
@@ -80,5 +88,9 @@ fitapp/
 
 ```bash
 flask --app run init-db    # (re)create the schema
+./.venv/bin/python user.py create --name Alice --email alice@example.com --password hunter2
+./.venv/bin/python user.py create --name Boss --email boss@example.com --password adminpw1 --admin
+./.venv/bin/python user.py reset --email alice@example.com --password newpass1   # any user
+./.venv/bin/python user.py delete --email alice@example.com                      # any user
 deactivate                 # leave the venv
 ```

@@ -23,7 +23,7 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <span class="badge
-            {% if w['workout_type'] == 'strength' %}text-bg-primary
+            {% if w['workout_type'] == 'gym' %}text-bg-primary
             {% elif w['workout_type'] == 'cardio' %}text-bg-danger
             {% else %}text-bg-dark{% endif %}">
             {{ w['workout_type'] }}

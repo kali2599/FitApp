@@ -20,11 +20,17 @@
               </select>
             </div>
             <div class="col-md-8 mb-3">
-              <label class="form-label" for="categoryInput">Detail *</label>
-              <input class="form-control" id="categoryInput" name="category" type="text"
+              <label class="form-label" for="categoryBody">Detail *</label>
+              <input class="form-control" id="categoryBody" name="category" type="text"
                      list="categorySuggestions" value="{{ goal['category'] or '' }}"
-                     placeholder="e.g. Bench press, Weight, Front lever hold..." required>
-              <select class="form-control form-select d-none" id="categorySkill" name="category"></select>
+                     placeholder="e.g. Weight, Body fat" required>
+              <select class="form-select d-none" id="categoryMenu" name="category"></select>
+              <div class="input-group d-none" id="categoryCustomWrap">
+                <input class="form-control" id="categoryCustom" name="category" type="text"
+                       placeholder="Write your own exercise">
+                <button class="btn btn-outline-secondary" type="button" id="categoryBack"
+                        title="Back to the catalog" aria-label="Back to the catalog">&larr;</button>
+              </div>
               <datalist id="categorySuggestions"></datalist>
             </div>
           </div>
@@ -33,17 +39,15 @@
               <label class="form-label" for="unit">Unit *</label>
               <select class="form-select" id="unit" name="unit" required></select>
             </div>
-            <div class="col-md-3 mb-3" id="fieldStart">
+            <div class="col-md-3 mb-3">
               <label class="form-label" for="start_value">Start</label>
-              <input class="form-control" id="start_value_n" name="start_value" type="number" step="0.1"
+              <input class="form-control" id="start_value" name="start_value" type="number" step="0.1"
                      value="{{ goal['start_value'] if goal['start_value'] is not none else '' }}">
-              <select class="form-control form-select d-none" id="start_value_l" name="start_value"></select>
             </div>
-            <div class="col-md-3 mb-3" id="fieldTarget">
+            <div class="col-md-3 mb-3">
               <label class="form-label" for="target_value">Target *</label>
-              <input class="form-control" id="target_value_n" name="target_value" type="number" step="0.1"
+              <input class="form-control" id="target_value" name="target_value" type="number" step="0.1"
                      value="{{ goal['target_value'] if goal['target_value'] is not none else '' }}" required>
-              <select class="form-control form-select d-none" id="target_value_l" name="target_value"></select>
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label" for="target_date">Due date</label>
@@ -69,7 +73,7 @@
 
           <p class="small text-muted">
             Body uses your latest measurement, Strength uses your best matching exercise,
-            Skill uses your longest hold (or level from the catalog).
+            Skill uses your longest hold.
           </p>
 
           <div class="d-flex gap-2">
@@ -88,7 +92,8 @@
 {% block scripts %}
 <script>
   const unitMap = {{ unit_map|tojson }};
-  const skills = {{ skills|tojson }};
+  const suggestions = {{ suggestions|tojson }};
+  const menuCatalog = {{ menu_catalog|tojson }};
   const current = {
     unit: {{ goal['unit']|tojson }},
     category: {{ goal['category']|tojson }},
@@ -97,83 +102,60 @@
   };
   const typeSelect = document.getElementById('goal_type');
   const unitSelect = document.getElementById('unit');
-  const categoryInput = document.getElementById('categoryInput');
-  const categorySkill = document.getElementById('categorySkill');
+  const categoryBody = document.getElementById('categoryBody');
+  const categoryMenu = document.getElementById('categoryMenu');
+  const categoryCustom = document.getElementById('categoryCustom');
+  const categoryCustomWrap = document.getElementById('categoryCustomWrap');
+  const categoryBack = document.getElementById('categoryBack');
   const datalist = document.getElementById('categorySuggestions');
-  const startN = document.getElementById('start_value_n');
-  const startL = document.getElementById('start_value_l');
-  const targetN = document.getElementById('target_value_n');
-  const targetL = document.getElementById('target_value_l');
 
-  const skillKeys = Object.keys(skills).sort();
-
-  function fillLevelSelect(select, skill) {
-    select.innerHTML = '';
-    (skills[skill] || []).forEach(function (entry) {
-      const opt = document.createElement('option');
-      opt.value = entry.level;
-      opt.textContent = entry.level;
-      select.appendChild(opt);
-    });
-  }
-
-  function fillSkillMenu() {
-    categorySkill.innerHTML = '';
-    if (skillKeys.length === 0) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = 'No skills available';
-      opt.disabled = true;
-      categorySkill.appendChild(opt);
-    } else {
-      skillKeys.forEach(function (skill) {
-        const opt = document.createElement('option');
-        opt.value = skill;
-        opt.textContent = skill;
-        if (skill === String(current.category).toLowerCase()) opt.selected = true;
-        categorySkill.appendChild(opt);
-      });
-    }
-  }
-
-  function setSkillMode(on) {
-    categoryInput.classList.toggle('d-none', on);
-    categorySkill.classList.toggle('d-none', !on);
-    categoryInput.required = !on;
-    categorySkill.required = on;
-    categoryInput.disabled = on;
-    categorySkill.disabled = !on;
-    if (on) fillSkillMenu();
-    else refreshSuggestions();
-  }
-
-  function setLevelMode(on) {
-    startN.classList.toggle('d-none', on);
-    startL.classList.toggle('d-none', !on);
-    targetN.classList.toggle('d-none', on);
-    targetL.classList.toggle('d-none', !on);
-    startN.required = !on;
-    targetN.required = !on;
-    startL.required = on;
-    targetL.required = on;
-    startN.disabled = on;
-    targetN.disabled = on;
-    startL.disabled = !on;
-    targetL.disabled = !on;
-    if (on) syncSkill();
-  }
-
-  function refreshSuggestions() {
+  function fillDatalist(values) {
     datalist.innerHTML = '';
-    const bucket = (typeof suggestions !== 'undefined' && suggestions[typeSelect.value]) || [];
-    bucket.forEach(function (value) {
+    (values || []).forEach(function (value) {
       const option = document.createElement('option');
       option.value = value;
       datalist.appendChild(option);
     });
   }
 
-  function refresh() {
+  function fillMenu(type) {
+    categoryMenu.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Choose from the catalog…';
+    categoryMenu.appendChild(placeholder);
+
+    const target = String(current.category || '').toLowerCase();
+    (menuCatalog[type] || []).forEach(function (name) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      if (name.toLowerCase() === target) opt.selected = true;
+      categoryMenu.appendChild(opt);
+    });
+
+    const custom = document.createElement('option');
+    custom.value = '__custom__';
+    custom.textContent = '✎ Write your own…';
+    categoryMenu.appendChild(custom);
+  }
+
+  function setCategoryMode(mode) {
+    const isBody = mode === 'body';
+    const isMenu = mode === 'menu';
+    const isCustom = mode === 'custom';
+    categoryBody.classList.toggle('d-none', !isBody);
+    categoryBody.disabled = !isBody;
+    categoryBody.required = isBody;
+    categoryMenu.classList.toggle('d-none', !isMenu);
+    categoryMenu.disabled = !isMenu;
+    categoryMenu.required = isMenu;
+    categoryCustomWrap.classList.toggle('d-none', !isCustom);
+    categoryCustom.disabled = !isCustom;
+    categoryCustom.required = isCustom;
+  }
+
+  function refreshUnits() {
     unitSelect.innerHTML = '';
     (unitMap[typeSelect.value] || []).forEach(function (u) {
       const opt = document.createElement('option');
@@ -182,33 +164,51 @@
       if (u === current.unit) opt.selected = true;
       unitSelect.appendChild(opt);
     });
-    if (!unitSelect.selectedIndex) unitSelect.selectedIndex = 0;
-    sync();
+    if (unitSelect.selectedIndex < 0 && unitSelect.options.length) unitSelect.selectedIndex = 0;
   }
 
-  function sync() {
-    const levels = unitSelect.value === 'levels';
-    setSkillMode(typeSelect.value === 'skill');
-    setLevelMode(levels);
+  function refreshCategory() {
+    const type = typeSelect.value;
+    if (type === 'strength' || type === 'skill') {
+      fillMenu(type);
+      const listed = menuCatalog[type] || [];
+      const name = String(current.category || '');
+      const known = listed.some(function (n) { return n.toLowerCase() === name.toLowerCase(); });
+      if (name && !known) {
+        categoryCustom.value = name;
+        setCategoryMode('custom');
+      } else {
+        setCategoryMode('menu');
+      }
+    } else {
+      fillDatalist(suggestions['body'] || []);
+      categoryBody.value = current.category || '';
+      setCategoryMode('body');
+    }
   }
 
-  function syncSkill() {
-    const skill = categorySkill.value;
-    fillLevelSelect(startL, skill);
-    fillLevelSelect(targetL, skill);
-    [...startL.options].forEach(function (o) {
-      if (o.value === String(current.start)) o.selected = true;
-    });
-    [...targetL.options].forEach(function (o) {
-      if (o.value === String(current.target)) o.selected = true;
-    });
-    if (startL.selectedIndex < 0 && startL.options.length) startL.selectedIndex = 0;
-    if (targetL.selectedIndex < 0 && targetL.options.length) targetL.selectedIndex = 0;
-  }
+  typeSelect.addEventListener('change', function () {
+    current.category = '';
+    refreshUnits();
+    refreshCategory();
+  });
 
-  typeSelect.addEventListener('change', function () { current.unit = undefined; refresh(); });
-  unitSelect.addEventListener('change', sync);
-  categorySkill.addEventListener('change', syncSkill);
-  refresh();
+  categoryMenu.addEventListener('change', function () {
+    if (categoryMenu.value === '__custom__') {
+      categoryCustom.value = '';
+      setCategoryMode('custom');
+      categoryCustom.focus();
+    }
+  });
+
+  categoryBack.addEventListener('click', function () {
+    categoryCustom.value = '';
+    categoryMenu.value = '';
+    setCategoryMode('menu');
+    categoryMenu.focus();
+  });
+
+  refreshUnits();
+  refreshCategory();
 </script>
 {% endblock %}

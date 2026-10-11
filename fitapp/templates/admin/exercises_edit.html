@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Admin · Edit exercise{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-pencil me-2"></i>Edit exercise</span>
+        <a class="small" href="{{ url_for('admin.exercises') }}">Back to catalog</a>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="name">Name *</label>
+            <input class="form-control" id="name" name="name" type="text" required
+                   value="{{ exercise['name'] }}" placeholder="e.g. Bench press">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="category">Category *</label>
+            <select class="form-select" id="category" name="category" required>
+              {% for c in categories %}
+              <option value="{{ c }}" {% if exercise['category'] == c %}selected{% endif %}>{{ c.capitalize() }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3" id="subcategoryField">
+            <label class="form-label" for="subcategory">Subcategory</label>
+            <select class="form-select" id="subcategory" name="subcategory">
+              <option value="">—</option>
+              {% for s in subcategories %}
+              <option value="{{ s }}" {% if exercise['subcategory'] == s %}selected{% endif %}>{{ s.capitalize() }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2">{{ exercise['notes'] }}</textarea>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>Save</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('admin.exercises') }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const categorySel = document.getElementById('category');
+  const subField = document.getElementById('subcategoryField');
+  const subSel = document.getElementById('subcategory');
+
+  function syncSub() {
+    const gym = categorySel.value === 'gym';
+    subField.style.display = gym ? '' : 'none';
+    subSel.required = gym;
+    if (!gym) subSel.value = '';
+  }
+  categorySel.addEventListener('change', syncSub);
+  syncSub();
+</script>
+{% endblock %}

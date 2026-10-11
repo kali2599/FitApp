@@ -81,19 +81,10 @@ def _best_match(db, user_id, category, column):
     return None
 
 
-def level_scores(db, skill):
-    """Return {level_name: score} for a skill, keyed lowercase."""
-    rows = db.execute(
-        "SELECT level, score FROM skill_levels WHERE skill = ? ORDER BY position",
-        (str(skill).lower(),),
-    ).fetchall()
-    return {str(row["level"]).lower(): row["score"] for row in rows}
-
-
 def current_value(db, user_id, goal):
     """Return (value, source_label) for a goal, or (None, None).
 
-    Numeric goals return a float; level-based skill goals return the level name.
+    Numeric goals return a float.
     """
     goal_type = goal["goal_type"]
     unit = goal["unit"] or ""
@@ -105,8 +96,6 @@ def current_value(db, user_id, goal):
         (goal["id"], user_id),
     ).fetchone()
     if manual is not None and manual["value"] is not None:
-        if goal_type == "skill" and unit == "levels":
-            return (str(manual["value"]), "logged level")
         value = _to_number(manual["value"])
         if value is not None:
             return (value, "logged progress")
@@ -138,31 +127,11 @@ def current_value(db, user_id, goal):
             return (best, COLUMN_LABELS["duration_sec"])
         return _fallback(goal)
 
-    if goal_type == "skill" and unit == "levels":
-        start = goal["start_value"]
-        if start is not None and str(start).strip():
-            return (str(start), "start level")
-        return (None, None)
-
     return _fallback(goal)
 
 
 def percent(db, goal, current):
-    """Completion percent (0-150) for a goal given its current value.
-
-    Level-based skill goals compare the level scores from skill_levels;
-    numeric goals use utils.goal_progress.
-    """
+    """Completion percent (0-150) for a goal given its current value."""
     if current is None:
         return None
-    if isinstance(current, str) or (goal["unit"] or "") == "levels":
-        scores = level_scores(db, goal["category"])
-        current_level = str(current).lower()
-        target_level = str(goal["target_value"] or "").lower()
-        current_score = scores.get(current_level)
-        target_score = scores.get(target_level)
-        if current_score is None or target_score is None:
-            return None
-        ratio = current_score / target_score
-        return round(max(0.0, min(150.0, ratio * 100)), 1)
     return goal_progress(goal, current)

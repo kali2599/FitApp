@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Admin · Users{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0"><i class="bi bi-shield-lock me-2"></i>Users</h1>
+  <a class="btn btn-outline-primary" href="{{ url_for('admin.exercises') }}">
+    <i class="bi bi-database me-1"></i>Exercise catalog
+  </a>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>User</th>
+            <th>Role</th>
+            <th class="text-center">Workouts</th>
+            <th class="text-center">Modules</th>
+            <th class="text-center">Sessions</th>
+            <th class="text-center">Goals</th>
+            <th class="text-center">Meals</th>
+            <th class="text-center">Stats</th>
+            <th>Joined</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in users %}
+          {% set u = entry['user'] %}
+          {% set c = entry['counts'] %}
+          <tr>
+            <td>
+              <a class="fw-semibold text-decoration-none" href="{{ url_for('admin.user_detail', user_id=u['id']) }}">
+                {{ u['username'] }}
+              </a>
+              <div class="small text-muted">{{ u['email'] }}</div>
+            </td>
+            <td>
+              {% if u['role'] == 'admin' %}
+              <span class="badge text-bg-dark">admin</span>
+              {% else %}
+              <span class="badge text-bg-secondary">user</span>
+              {% endif %}
+            </td>
+            <td class="text-center">{{ c['workouts'] }}</td>
+            <td class="text-center">{{ c['days'] }}</td>
+            <td class="text-center">{{ c['sessions'] }}</td>
+            <td class="text-center">{{ c['goals'] }}</td>
+            <td class="text-center">{{ c['meals'] }}</td>
+            <td class="text-center">{{ c['measurements'] }}</td>
+            <td class="small text-muted">{{ (u['created_at'] or '')[:10] }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.user_detail', user_id=u['id']) }}">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

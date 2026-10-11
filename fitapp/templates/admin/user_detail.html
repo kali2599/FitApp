@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Admin · {{ user['username'] }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <a class="small" href="{{ url_for('admin.index') }}">&larr; All users</a>
+    <h1 class="h3 mb-1 mt-1">
+      {{ user['username'] }}
+      {% if user['role'] == 'admin' %}
+      <span class="badge text-bg-dark">admin</span>
+      {% endif %}
+    </h1>
+    <div class="small text-muted">{{ user['email'] }} &middot; joined {{ (user['created_at'] or '')[:10] }}</div>
+  </div>
+  {% if user['role'] == 'user' %}
+  <form action="{{ url_for('admin.user_reset_password', user_id=user['id']) }}" method="post"
+        class="d-flex align-items-center gap-2 needs-validation" novalidate>
+    <input class="form-control form-control-sm" name="password" type="password" minlength="6"
+           placeholder="New password" required>
+    <button class="btn btn-sm btn-warning" type="submit">Reset password</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-3">
+  {% for key, icon, label in [('workouts', 'bi-emoji-heart-eyes', 'Workouts'),
+                              ('days', 'bi-calendar-day', 'Modules'),
+                              ('sessions', 'bi-clipboard-check', 'Sessions'),
+                              ('goals', 'bi-bullseye', 'Goals'),
+                              ('meals', 'bi-cup-straw', 'Meals'),
+                              ('measurements', 'bi-rulers', 'Measurements')] %}
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card stat-card h-100 shadow-sm border-0">
+      <div class="card-body text-center">
+        <div class="fs-4 fw-bold">{{ counts[key] }}</div>
+        <div class="small text-muted"><i class="bi {{ icon }} me-1"></i>{{ label }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if workouts %}
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-emoji-heart-eyes me-2"></i>Workouts</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Name</th><th>Type</th><th class="text-center">Modules</th><th class="text-center">Exercises</th></tr></thead>
+        <tbody>
+          {% for w in workouts %}
+          <tr>
+            <td>{{ w['name'] }}</td>
+            <td><span class="badge text-bg-light border">{{ w['workout_type'] }}</span></td>
+            <td class="text-center">{{ w['day_count'] }}</td>
+            <td class="text-center">{{ w['exercise_count'] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if sessions %}
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-clipboard-check me-2"></i>Recent sessions</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Date</th><th>Workout</th><th>Module</th><th class="text-end">Minutes</th><th class="text-end">Calories</th></tr></thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td>{{ s['performed_date'] }}</td>
+            <td>{{ s['workout_name'] or '—' }}</td>
+            <td>{{ s['day_name'] or '—' }}</td>
+            <td class="text-end">{{ s['duration_min'] or '—' }}</td>
+            <td class="text-end">{{ s['calories'] or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if goals %}
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-bullseye me-2"></i>Active goals</div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for item in goals %}
+      {% set goal = item['goal'] %}
+      <div class="col-md-6">
+        <div class="border rounded p-3 h-100">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="badge {{ {'body': 'text-bg-info', 'skill': 'text-bg-primary', 'strength': 'text-bg-warning'}[goal['goal_type']] }}">{{ goal['goal_type'] }}</span>
+            <span class="small text-muted">{{ goal['unit'] }}</span>
+          </div>
+          <div class="fw-semibold">{{ goal['category'] }}</div>
+          <div class="small text-muted">
+            Target {{ goal['target_value'] }}{% if goal['target_date'] %} by {{ goal['target_date'] }}{% endif %}
+          </div>
+          {% if item['percent'] is not none %}
+          <div class="d-flex justify-content-between small mt-2 mb-1">
+            <span>{{ item['current'] }} <span class="text-muted">({{ item['source'] }})</span></span>
+            <span class="fw-semibold">{{ item['percent'] }}%</span>
+          </div>
+          <div class="progress" style="height: 6px;">
+            <div class="progress-bar" style="width: {{ item['percent']|int }}%"></div>
+          </div>
+          {% else %}
+          <div class="small text-muted mt-2">No progress data yet.</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if stats %}
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-rulers me-2"></i>Body stats</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Date</th><th>Weight</th><th>Body fat %</th><th>Chest</th><th>Waist</th><th>Hip</th><th>Arm</th></tr></thead>
+        <tbody>
+          {% for s in stats %}
+          <tr>
+            <td>{{ s['stat_date'] }}</td>
+            <td>{{ s['weight_kg'] or '—' }}</td>
+            <td>{{ s['body_fat_pct'] or '—' }}</td>
+            <td>{{ s['chest_cm'] or '—' }}</td>
+            <td>{{ s['waist_cm'] or '—' }}</td>
+            <td>{{ s['hip_cm'] or '—' }}</td>
+            <td>{{ s['arm_cm'] or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if meals %}
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-cup-straw me-2"></i>Recent meals</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Date</th><th>Meal</th><th>Description</th><th class="text-end">Calories</th></tr></thead>
+        <tbody>
+          {% for m in meals %}
+          <tr>
+            <td>{{ m['diet_date'] }}</td>
+            <td>{{ m['meal_type'] }}</td>
+            <td>{{ m['description'] }}</td>
+            <td class="text-end">{{ m['calories'] or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

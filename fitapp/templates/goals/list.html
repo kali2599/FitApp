@@ -59,17 +59,17 @@
         <ul class="list-unstyled small mb-0">
           <li class="d-flex justify-content-between">
             <span class="text-muted">Target</span>
-            <span class="fw-semibold">{{ goal['target_value'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }}</span>
+            <span class="fw-semibold">{{ goal['target_value'] }}{{ goal['unit'] }}</span>
           </li>
           {% if goal['start_value'] is not none and goal['start_value'] != '' %}
           <li class="d-flex justify-content-between">
-            <span class="text-muted">Start</span><span>{{ goal['start_value'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }}</span>
+            <span class="text-muted">Start</span><span>{{ goal['start_value'] }}{{ goal['unit'] }}</span>
           </li>
           {% endif %}
           <li class="d-flex justify-content-between">
             <span class="text-muted">Current</span>
             {% if item['current'] is not none %}
-            <span class="fw-semibold">{{ item['current'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }}</span>
+            <span class="fw-semibold">{{ item['current'] }}{{ goal['unit'] }}</span>
             {% else %}
             <span class="text-muted fst-italic small">no data &mdash; log the exercise to track progress</span>
             {% endif %}
