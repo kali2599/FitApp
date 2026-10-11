@@ -17,8 +17,9 @@ A Flask web app for managing your personal fitness life: **workouts, diets, goal
   **sessions** ("Log this day") and later edit your actual reps/weight/time in
   `/workouts/sessions`
 - **Diet** (`/diets`) — create / edit / delete meal entries with calories and macros
-- **Goals** (`/goals`) — performance and body goals with automatic progress tracking
-  (body goals use your latest measurement, performance goals your best matching exercise)
+- **Goals** (`/goals`) — goals in three categories (body, skill, strength) with
+  automatic progress tracking; units are restricted per category (body: kg/%, skill:
+  seconds/levels, strength: kg/reps) and skill levels come from the `skill_levels` catalog
 - **Body stats** (`/stats`) — weight, body fat and measurements over time. A
   **lifestyle profile** (sessions/week, intensity, activity level, sleep, daily
   calories, goal direction, water, stress) powers a **Body insights** report with

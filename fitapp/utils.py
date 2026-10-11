@@ -50,13 +50,30 @@ def to_date(value):
 
 
 def goal_progress(goal, current_value):
-    """Return completion percentage (0-100+) for a goal given the current value."""
-    start = goal["start_value"]
-    target = goal["target_value"]
+    """Return completion percentage (0-150) for a goal given the current value.
+
+    Decreasing targets (target < start, e.g. losing weight/fat) are measured
+    from the start point; increasing targets use a zero-based current/target
+    ratio (so an unlogged goal defaults to its start value).
+    """
+    start = _as_float(goal["start_value"])
+    target = _as_float(goal["target_value"])
     if current_value is None or target is None:
         return None
-    if start is None or start == target:
-        reached = current_value >= target if target >= 0 else current_value <= target
-        return 100.0 if reached else 0.0
-    ratio = (current_value - start) / (target - start)
-    return round(max(0.0, min(1.5, ratio * 100)), 1)
+    if start is not None and target < start:
+        ratio = (current_value - start) / (target - start)
+    else:
+        if target <= 0:
+            return None
+        ratio = current_value / target
+    return round(max(0.0, min(150.0, ratio * 100)), 1)
+
+
+def _as_float(value):
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number

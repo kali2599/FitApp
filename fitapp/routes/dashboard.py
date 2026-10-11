@@ -6,7 +6,6 @@ from .. import progress
 from ..auth import login_required
 from ..db import get_db
 from ..insights import compute
-from ..utils import goal_progress
 
 bp = Blueprint("dashboard", __name__)
 
@@ -113,7 +112,7 @@ def index():
                 "goal": goal,
                 "current": current,
                 "source": source,
-                "percent": goal_progress(goal, current),
+                "percent": progress.percent(db, goal, current),
             }
         )
 

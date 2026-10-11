@@ -12,41 +12,41 @@
         <form method="post" novalidate>
           <div class="row">
             <div class="col-md-4 mb-3">
-              <label class="form-label" for="goal_type">Goal type *</label>
+              <label class="form-label" for="goal_type">Category *</label>
               <select class="form-select" id="goal_type" name="goal_type" required>
                 {% for t in goal_types %}
-                <option value="{{ t }}" {% if goal['goal_type'] == t %}selected{% endif %}>
-                  {{ 'Performance' if t == 'performance' else 'Body' }}
-                </option>
+                <option value="{{ t }}" {% if goal['goal_type'] == t %}selected{% endif %}>{{ t.capitalize() }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-8 mb-3">
-              <label class="form-label" for="category">Category *</label>
-              <input class="form-control" id="category" name="category" type="text"
+              <label class="form-label" for="categoryInput">Detail *</label>
+              <input class="form-control" id="categoryInput" name="category" type="text"
                      list="categorySuggestions" value="{{ goal['category'] or '' }}"
-                     placeholder="e.g. Bench press, Weight, Waist..." required>
+                     placeholder="e.g. Bench press, Weight, Front lever hold..." required>
+              <select class="form-control form-select d-none" id="categorySkill" name="category"></select>
               <datalist id="categorySuggestions"></datalist>
             </div>
           </div>
           <div class="row">
-            <div class="col-md-3 mb-3">
-              <label class="form-label" for="start_value">Start value</label>
-              <input class="form-control" id="start_value" name="start_value" type="number" step="0.1"
-                     value="{{ goal['start_value'] if goal['start_value'] is not none else '' }}">
-            </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label" for="target_value">Target value *</label>
-              <input class="form-control" id="target_value" name="target_value" type="number" step="0.1"
-                     value="{{ goal['target_value'] if goal['target_value'] is not none else '' }}" required>
-            </div>
-            <div class="col-md-3 mb-3">
+            <div class="col-md-2 mb-3">
               <label class="form-label" for="unit">Unit *</label>
-              <input class="form-control" id="unit" name="unit" type="text"
-                     value="{{ goal['unit'] or '' }}" placeholder="kg, %, cm, reps" required>
+              <select class="form-select" id="unit" name="unit" required></select>
             </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label" for="target_date">Target date</label>
+            <div class="col-md-3 mb-3" id="fieldStart">
+              <label class="form-label" for="start_value">Start</label>
+              <input class="form-control" id="start_value_n" name="start_value" type="number" step="0.1"
+                     value="{{ goal['start_value'] if goal['start_value'] is not none else '' }}">
+              <select class="form-control form-select d-none" id="start_value_l" name="start_value"></select>
+            </div>
+            <div class="col-md-3 mb-3" id="fieldTarget">
+              <label class="form-label" for="target_value">Target *</label>
+              <input class="form-control" id="target_value_n" name="target_value" type="number" step="0.1"
+                     value="{{ goal['target_value'] if goal['target_value'] is not none else '' }}" required>
+              <select class="form-control form-select d-none" id="target_value_l" name="target_value"></select>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="target_date">Due date</label>
               <input class="form-control" id="target_date" name="target_date" type="date"
                      value="{{ goal['target_date'] or '' }}">
             </div>
@@ -68,8 +68,8 @@
           </div>
 
           <p class="small text-muted">
-            Progress is computed automatically: body goals use your latest measurement,
-            performance goals use your best matching exercise entry.
+            Body uses your latest measurement, Strength uses your best matching exercise,
+            Skill uses your longest hold (or level from the catalog).
           </p>
 
           <div class="d-flex gap-2">
@@ -87,18 +87,128 @@
 
 {% block scripts %}
 <script>
-  const suggestions = {{ suggestions|tojson }};
+  const unitMap = {{ unit_map|tojson }};
+  const skills = {{ skills|tojson }};
+  const current = {
+    unit: {{ goal['unit']|tojson }},
+    category: {{ goal['category']|tojson }},
+    start: {{ goal['start_value']|tojson }},
+    target: {{ goal['target_value']|tojson }}
+  };
   const typeSelect = document.getElementById('goal_type');
+  const unitSelect = document.getElementById('unit');
+  const categoryInput = document.getElementById('categoryInput');
+  const categorySkill = document.getElementById('categorySkill');
   const datalist = document.getElementById('categorySuggestions');
-  function refresh() {
+  const startN = document.getElementById('start_value_n');
+  const startL = document.getElementById('start_value_l');
+  const targetN = document.getElementById('target_value_n');
+  const targetL = document.getElementById('target_value_l');
+
+  const skillKeys = Object.keys(skills).sort();
+
+  function fillLevelSelect(select, skill) {
+    select.innerHTML = '';
+    (skills[skill] || []).forEach(function (entry) {
+      const opt = document.createElement('option');
+      opt.value = entry.level;
+      opt.textContent = entry.level;
+      select.appendChild(opt);
+    });
+  }
+
+  function fillSkillMenu() {
+    categorySkill.innerHTML = '';
+    if (skillKeys.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'No skills available';
+      opt.disabled = true;
+      categorySkill.appendChild(opt);
+    } else {
+      skillKeys.forEach(function (skill) {
+        const opt = document.createElement('option');
+        opt.value = skill;
+        opt.textContent = skill;
+        if (skill === String(current.category).toLowerCase()) opt.selected = true;
+        categorySkill.appendChild(opt);
+      });
+    }
+  }
+
+  function setSkillMode(on) {
+    categoryInput.classList.toggle('d-none', on);
+    categorySkill.classList.toggle('d-none', !on);
+    categoryInput.required = !on;
+    categorySkill.required = on;
+    categoryInput.disabled = on;
+    categorySkill.disabled = !on;
+    if (on) fillSkillMenu();
+    else refreshSuggestions();
+  }
+
+  function setLevelMode(on) {
+    startN.classList.toggle('d-none', on);
+    startL.classList.toggle('d-none', !on);
+    targetN.classList.toggle('d-none', on);
+    targetL.classList.toggle('d-none', !on);
+    startN.required = !on;
+    targetN.required = !on;
+    startL.required = on;
+    targetL.required = on;
+    startN.disabled = on;
+    targetN.disabled = on;
+    startL.disabled = !on;
+    targetL.disabled = !on;
+    if (on) syncSkill();
+  }
+
+  function refreshSuggestions() {
     datalist.innerHTML = '';
-    (suggestions[typeSelect.value] || []).forEach(value => {
+    const bucket = (typeof suggestions !== 'undefined' && suggestions[typeSelect.value]) || [];
+    bucket.forEach(function (value) {
       const option = document.createElement('option');
       option.value = value;
       datalist.appendChild(option);
     });
   }
-  typeSelect.addEventListener('change', refresh);
+
+  function refresh() {
+    unitSelect.innerHTML = '';
+    (unitMap[typeSelect.value] || []).forEach(function (u) {
+      const opt = document.createElement('option');
+      opt.value = u;
+      opt.textContent = u;
+      if (u === current.unit) opt.selected = true;
+      unitSelect.appendChild(opt);
+    });
+    if (!unitSelect.selectedIndex) unitSelect.selectedIndex = 0;
+    sync();
+  }
+
+  function sync() {
+    const levels = unitSelect.value === 'levels';
+    setSkillMode(typeSelect.value === 'skill');
+    setLevelMode(levels);
+  }
+
+  function syncSkill() {
+    const skill = categorySkill.value;
+    fillLevelSelect(startL, skill);
+    fillLevelSelect(targetL, skill);
+    [...startL.options].forEach(function (o) {
+      if (o.value === String(current.start)) o.selected = true;
+    });
+    [...targetL.options].forEach(function (o) {
+      if (o.value === String(current.target)) o.selected = true;
+    });
+    if (startL.selectedIndex < 0 && startL.options.length) startL.selectedIndex = 0;
+    if (targetL.selectedIndex < 0 && targetL.options.length) targetL.selectedIndex = 0;
+  }
+
+  typeSelect.addEventListener('change', function () { current.unit = undefined; refresh(); });
+  unitSelect.addEventListener('change', sync);
+  categorySkill.addEventListener('change', syncSkill);
   refresh();
 </script>
 {% endblock %}

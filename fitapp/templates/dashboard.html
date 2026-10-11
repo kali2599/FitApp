@@ -183,8 +183,14 @@
           <div class="mb-3">
             <div class="d-flex justify-content-between small mb-1">
               <span class="fw-semibold">{{ goal['category'] }} <span class="text-muted fw-normal">({{ goal['goal_type'] }})</span></span>
-              <span class="text-muted">
-                {% if item['current'] is not none %}{{ item['current'] }}{{ goal['unit'] }} / {% endif %}{{ goal['target_value'] }}{{ goal['unit'] }}
+              <span>
+                <a class="text-decoration-none text-primary" href="{{ url_for('goals.log', goal_id=goal['id']) }}"
+                   title="Log progress">
+                  <i class="bi bi-plus-circle me-1"></i>Log
+                </a>
+                <span class="text-muted">
+                  {% if item['current'] is not none %}{{ item['current'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }} / {% endif %}{{ goal['target_value'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }}
+                </span>
               </span>
             </div>
             <div class="progress" style="height: 10px;">

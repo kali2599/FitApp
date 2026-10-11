@@ -26,7 +26,7 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
-            <span class="badge {% if goal['goal_type'] == 'performance' %}text-bg-primary{% else %}text-bg-info{% endif %}">
+            <span class="badge {{ {'body': 'text-bg-info', 'skill': 'text-bg-primary', 'strength': 'text-bg-warning'}[goal['goal_type']] }}">
               {{ goal['goal_type'] }}
             </span>
             <h2 class="h6 mt-2 mb-0">{{ goal['category'] }}</h2>
@@ -34,6 +34,10 @@
           <div class="btn-group">
             <a class="btn btn-sm btn-outline-success" href="{{ url_for('goals.edit', goal_id=goal['id']) }}">
               <i class="bi bi-pencil"></i>
+            </a>
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('goals.log', goal_id=goal['id']) }}"
+               title="Log progress">
+              <i class="bi bi-plus-lg"></i>
             </a>
             <form class="d-inline" action="{{ url_for('goals.delete', goal_id=goal['id']) }}" method="post"
                   onsubmit="return confirm('Delete this goal?');">
@@ -55,16 +59,20 @@
         <ul class="list-unstyled small mb-0">
           <li class="d-flex justify-content-between">
             <span class="text-muted">Target</span>
-            <span class="fw-semibold">{{ goal['target_value'] }}{{ goal['unit'] }}</span>
+            <span class="fw-semibold">{{ goal['target_value'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }}</span>
           </li>
-          {% if goal['start_value'] is not none %}
+          {% if goal['start_value'] is not none and goal['start_value'] != '' %}
           <li class="d-flex justify-content-between">
-            <span class="text-muted">Start</span><span>{{ goal['start_value'] }}{{ goal['unit'] }}</span>
+            <span class="text-muted">Start</span><span>{{ goal['start_value'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }}</span>
           </li>
           {% endif %}
           <li class="d-flex justify-content-between">
             <span class="text-muted">Current</span>
-            <span>{{ item['current'] ~ goal['unit'] if item['current'] is not none else 'no data' }}</span>
+            {% if item['current'] is not none %}
+            <span class="fw-semibold">{{ item['current'] }}{{ '' if goal['unit'] == 'levels' else goal['unit'] }}</span>
+            {% else %}
+            <span class="text-muted fst-italic small">no data &mdash; log the exercise to track progress</span>
+            {% endif %}
           </li>
           {% if goal['target_date'] %}
           <li class="d-flex justify-content-between">
@@ -80,6 +88,11 @@
         {% if goal['notes'] %}
         <p class="small text-muted mt-2 mb-0">{{ goal['notes'] }}</p>
         {% endif %}
+        <div class="mt-3">
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('goals.log', goal_id=goal['id']) }}">
+            <i class="bi bi-plus-lg me-1"></i>Log progress
+          </a>
+        </div>
       </div>
       <div class="card-footer bg-white small text-muted">
         Created {{ goal['created_at'][:10] }}

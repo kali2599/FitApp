@@ -119,11 +119,11 @@ CREATE TABLE IF NOT EXISTS body_stats (
 CREATE TABLE IF NOT EXISTS goals (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    goal_type    TEXT NOT NULL CHECK (goal_type IN ('performance', 'body')),
+    goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength')),
     category     TEXT NOT NULL,
-    target_value REAL NOT NULL,
-    unit         TEXT NOT NULL,
-    start_value  REAL,
+    target_value TEXT NOT NULL,
+    unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels')),
+    start_value  TEXT,
     target_date  TEXT,
     status       TEXT NOT NULL DEFAULT 'active'
                  CHECK (status IN ('active', 'achieved', 'abandoned')),
@@ -146,6 +146,25 @@ CREATE TABLE IF NOT EXISTS user_lifestyle (
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS goal_logs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    goal_id     INTEGER NOT NULL REFERENCES goals (id) ON DELETE CASCADE,
+    value       TEXT NOT NULL,
+    logged_date TEXT NOT NULL,
+    notes       TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS skill_levels (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    skill    TEXT NOT NULL,
+    level    TEXT NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    score    REAL NOT NULL,
+    UNIQUE (skill, level)
+);
+
 CREATE INDEX IF NOT EXISTS idx_workouts_user ON workouts (user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_days_workout ON workout_days (workout_id, position);
 CREATE INDEX IF NOT EXISTS idx_circuits_day ON circuits (workout_day_id, position);
@@ -155,6 +174,8 @@ CREATE INDEX IF NOT EXISTS idx_session_entries ON session_entries (session_id, p
 CREATE INDEX IF NOT EXISTS idx_diets_user ON diets (user_id, diet_date);
 CREATE INDEX IF NOT EXISTS idx_stats_user ON body_stats (user_id, stat_date);
 CREATE INDEX IF NOT EXISTS idx_goals_user ON goals (user_id, status);
+CREATE INDEX IF NOT EXISTS idx_goal_logs_goal ON goal_logs (goal_id, logged_date);
+CREATE INDEX IF NOT EXISTS idx_skill_levels ON skill_levels (skill, position);
 """
 
 
@@ -175,8 +196,18 @@ def close_db(e=None):
         db.close()
 
 
+def _migrate_goals(db):
+    row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'goals'"
+    ).fetchone()
+    if row and "'skill'" not in (row["sql"] or ""):
+        db.execute("DROP TABLE IF EXISTS goal_logs")
+        db.execute("DROP TABLE IF EXISTS goals")
+
+
 def init_db():
     db = get_db()
+    _migrate_goals(db)
     db.executescript(SCHEMA)
     db.commit()
 
