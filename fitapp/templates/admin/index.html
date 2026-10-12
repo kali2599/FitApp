@@ -16,9 +16,10 @@
           <tr>
             <th>User</th>
             <th>Role</th>
+            <th class="text-center">Sports</th>
             <th class="text-center">Workouts</th>
+            <th class="text-center">Days</th>
             <th class="text-center">Modules</th>
-            <th class="text-center">Sessions</th>
             <th class="text-center">Goals</th>
             <th class="text-center">Meals</th>
             <th class="text-center">Stats</th>
@@ -44,9 +45,10 @@
               <span class="badge text-bg-secondary">user</span>
               {% endif %}
             </td>
+            <td class="text-center">{{ c['sports'] }}</td>
             <td class="text-center">{{ c['workouts'] }}</td>
             <td class="text-center">{{ c['days'] }}</td>
-            <td class="text-center">{{ c['sessions'] }}</td>
+            <td class="text-center">{{ c['modules'] }}</td>
             <td class="text-center">{{ c['goals'] }}</td>
             <td class="text-center">{{ c['meals'] }}</td>
             <td class="text-center">{{ c['measurements'] }}</td>

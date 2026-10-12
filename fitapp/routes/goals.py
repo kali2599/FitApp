@@ -22,7 +22,7 @@ STATUSES = ["active", "achieved", "abandoned"]
 
 UNIT_BY_TYPE = {
     "body": ["kg", "%"],
-    "skill": ["seconds"],
+    "skill": ["seconds", "reps"],
     "strength": ["kg", "reps"],
 }
 NUMERIC_UNITS = {"kg", "%", "seconds", "reps"}

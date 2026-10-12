@@ -14,7 +14,6 @@ from werkzeug.security import generate_password_hash
 from .. import progress
 from ..auth import admin_required
 from ..db import get_db
-from ..utils import to_date
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -25,15 +24,18 @@ EXERCISE_SUBCATEGORIES = ["strength", "skill"]
 def _counts(db, user_id):
     return db.execute(
         """SELECT
-             (SELECT COUNT(*) FROM workouts WHERE user_id = ?) AS workouts,
-             (SELECT COUNT(*) FROM workout_days
-                JOIN workouts w ON w.id = workout_days.workout_id
-               WHERE w.user_id = ?) AS days,
-             (SELECT COUNT(*) FROM workout_sessions WHERE user_id = ?) AS sessions,
+             (SELECT COUNT(*) FROM sports WHERE user_id = ?) AS sports,
+             (SELECT COUNT(*) FROM workouts w
+                JOIN sports s ON s.id = w.sport_id WHERE s.user_id = ?) AS workouts,
+             (SELECT COUNT(*) FROM workout_days d
+                JOIN workouts w ON w.id = d.workout_id
+                JOIN sports s ON s.id = w.sport_id WHERE s.user_id = ?) AS days,
+             (SELECT COUNT(*) FROM workout_modules m
+                JOIN sports s ON s.id = m.sport_id WHERE s.user_id = ?) AS modules,
              (SELECT COUNT(*) FROM goals WHERE user_id = ?) AS goals,
              (SELECT COUNT(*) FROM diets WHERE user_id = ?) AS meals,
              (SELECT COUNT(*) FROM body_stats WHERE user_id = ?) AS measurements""",
-        (user_id,) * 6,
+        (user_id,) * 7,
     ).fetchone()
 
 
@@ -65,22 +67,18 @@ def user_detail(user_id):
     user = _get_user(db, user_id)
     counts = _counts(db, user_id)
 
-    workouts = db.execute(
-        """SELECT w.*,
-                  (SELECT COUNT(*) FROM workout_days d WHERE d.workout_id = w.id) AS day_count,
+    sports = db.execute(
+        """SELECT s.*,
+                  (SELECT COUNT(*) FROM workouts w WHERE w.sport_id = s.id) AS workout_count,
+                  (SELECT COUNT(*) FROM workout_days d
+                     JOIN workouts w ON w.id = d.workout_id
+                    WHERE w.sport_id = s.id) AS day_count,
+                  (SELECT COUNT(*) FROM workout_modules m
+                    WHERE m.sport_id = s.id) AS module_count,
                   (SELECT COUNT(*) FROM day_exercises e
-                     JOIN workout_days d ON d.id = e.workout_day_id
-                    WHERE d.workout_id = w.id) AS exercise_count
-           FROM workouts w WHERE w.user_id = ? ORDER BY w.created_at DESC, w.id DESC""",
-        (user_id,),
-    ).fetchall()
-
-    sessions = db.execute(
-        """SELECT s.*, d.name AS day_name, w.name AS workout_name
-           FROM workout_sessions s
-           LEFT JOIN workout_days d ON d.id = s.workout_day_id
-           LEFT JOIN workouts w ON w.id = d.workout_id
-           WHERE s.user_id = ? ORDER BY s.performed_date DESC, s.id DESC LIMIT 20""",
+                     JOIN workout_modules m ON m.id = e.workout_module_id
+                    WHERE m.sport_id = s.id) AS exercise_count
+           FROM sports s WHERE s.user_id = ? ORDER BY s.created_at DESC, s.id DESC""",
         (user_id,),
     ).fetchall()
 
@@ -121,8 +119,7 @@ def user_detail(user_id):
         "admin/user_detail.html",
         user=user,
         counts=counts,
-        workouts=workouts,
-        sessions=sessions,
+        sports=sports,
         goals=goals,
         stats=stats,
         meals=meals,

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit workout' if editing else 'New workout' }} · {{ sport['name'] }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">
+          <i class="bi bi-layers me-2"></i>
+          {{ 'Edit workout' if editing else 'New workout' }}
+          <span class="badge
+            {% if sport['sport_type'] == 'gym' %}text-bg-primary
+            {% elif sport['sport_type'] == 'cardio' %}text-bg-danger
+            {% else %}text-bg-dark{% endif %} ms-1">{{ sport['sport_type'] }}</span>
+        </span>
+        <a class="small" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">Back to {{ sport['name'] }}</a>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="name">Workout name *</label>
+            <input class="form-control" id="name" name="name" type="text"
+                   value="{{ workout['name'] or '' }}" placeholder="e.g. Calisthenics beginner" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2"
+                      placeholder="Goal of the workout, schedule...">{{ workout['notes'] or '' }}</textarea>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success" type="submit">
+              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Create workout' }}
+            </button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

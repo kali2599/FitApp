@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Sports{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-1">Sports</h1>
+    <p class="text-muted mb-0">{{ sports|length }} sport{{ 's' if sports|length != 1 }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-success" href="{{ url_for('sports.new') }}">
+      <i class="bi bi-plus-lg me-1"></i>New sport
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for s in sports %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <span class="badge
+            {% if s['sport_type'] == 'gym' %}text-bg-primary
+            {% elif s['sport_type'] == 'cardio' %}text-bg-danger
+            {% else %}text-bg-dark{% endif %}">
+            {{ s['sport_type'] }}
+          </span>
+          <div class="btn-group">
+            <a class="btn btn-sm btn-outline-success" href="{{ url_for('sports.edit', sport_id=s['id']) }}">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form class="d-inline" action="{{ url_for('sports.delete', sport_id=s['id']) }}" method="post"
+                  onsubmit="return confirm('Delete this sport and all its workouts?');">
+              <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
+        </div>
+        <h2 class="h5 mb-1">
+          <a class="text-decoration-none" href="{{ url_for('sports.detail', sport_id=s['id']) }}">{{ s['name'] }}</a>
+        </h2>
+        {% if s['notes'] %}<p class="small text-muted mb-2">{{ s['notes'] }}</p>{% endif %}
+        <div class="small text-muted">
+          <i class="bi bi-layers me-1"></i>{{ s['workout_count'] }} workout{{ 's' if s['workout_count'] != 1 }}
+          &middot; <i class="bi bi-calendar-week me-1"></i>{{ s['day_count'] }} day{{ 's' if s['day_count'] != 1 }}
+          &middot; <i class="bi bi-list-check me-1"></i>{{ s['module_count'] }} module{{ 's' if s['module_count'] != 1 }}
+        </div>
+      </div>
+      <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+        <small class="text-muted">Created {{ s['created_at'][:10] }}</small>
+        <a class="btn btn-sm btn-success" href="{{ url_for('sports.detail', sport_id=s['id']) }}">
+          Open <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-lightning-charge-fill display-4 icon-grad"></i>
+        <p class="mt-3 mb-2">No sports yet. Create a sport (e.g. calisthenics) and define its workouts inside.</p>
+        <a class="btn btn-success" href="{{ url_for('sports.new') }}">Create your first sport</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

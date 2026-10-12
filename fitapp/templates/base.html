@@ -26,8 +26,8 @@
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}"
            href="{{ url_for('dashboard.index') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('workouts.') %}active{% endif %}"
-           href="{{ url_for('workouts.index') }}"><i class="bi bi-emoji-heart-eyes me-1"></i>Workouts</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('sports.') %}active{% endif %}"
+           href="{{ url_for('sports.index') }}"><i class="bi bi-emoji-heart-eyes me-1"></i>Sports</a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('diets.') %}active{% endif %}"
            href="{{ url_for('diets.index') }}"><i class="bi bi-cup-straw me-1"></i>Diet</a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('goals.') %}active{% endif %}"
@@ -76,7 +76,7 @@
 <footer class="bg-dark text-white-50 py-3 mt-auto">
   <div class="container small d-flex justify-content-between">
     <span>FitApp &copy; {{ now_year if now_year else '2026' }}</span>
-    <span>Track workouts, diet, goals &amp; body stats</span>
+    <span>Track sports, diet, goals &amp; body stats</span>
   </div>
 </footer>
 

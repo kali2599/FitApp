@@ -12,7 +12,7 @@ from .routes.diets import bp as diets_bp
 from .routes.goals import bp as goals_bp
 from .routes.profile import bp as profile_bp
 from .routes.stats import bp as stats_bp
-from .routes.workouts import bp as workouts_bp
+from .routes.sports import bp as sports_bp
 
 
 def create_app(config_overrides=None):
@@ -32,7 +32,7 @@ def create_app(config_overrides=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(profile_bp)
-    app.register_blueprint(workouts_bp)
+    app.register_blueprint(sports_bp)
     app.register_blueprint(diets_bp)
     app.register_blueprint(goals_bp)
     app.register_blueprint(stats_bp)

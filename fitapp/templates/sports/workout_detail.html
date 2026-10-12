@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}{{ workout['name'] }} · {{ sport['name'] }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a class="small text-decoration-none text-muted" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">{{ sport['name'] }}</a>
+      <span class="text-muted">&rsaquo;</span>
+      <h1 class="h3 mb-0">{{ workout['name'] }}</h1>
+      <span class="badge
+        {% if sport['sport_type'] == 'gym' %}text-bg-primary
+        {% elif sport['sport_type'] == 'cardio' %}text-bg-danger
+        {% else %}text-bg-dark{% endif %}">{{ sport['sport_type'] }}</span>
+    </div>
+    {% if workout['notes'] %}<p class="text-muted mb-0 mt-1">{{ workout['notes'] }}</p>{% endif %}
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-success" href="{{ url_for('sports.workout_edit', sport_id=sport['id'], workout_id=workout['id']) }}">
+      <i class="bi bi-pencil me-1"></i>Edit workout
+    </a>
+    <button class="btn btn-outline-success" type="button" data-bs-toggle="collapse"
+            data-bs-target="#workoutModules" aria-expanded="false" aria-controls="workoutModules">
+      <i class="bi bi-calendar-day me-1"></i>Modules
+      <span class="badge text-bg-light border ms-1">{{ module_count }}</span>
+    </button>
+    <a class="btn btn-success" href="{{ url_for('sports.day_new', sport_id=sport['id'], workout_id=workout['id']) }}">
+      <i class="bi bi-calendar-plus me-1"></i>Add day
+    </a>
+  </div>
+</div>
+
+<div class="collapse mb-3" id="workoutModules">
+  <div class="card shadow-sm border-0">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold"><i class="bi bi-calendar-day me-2 text-blue"></i>Available modules — {{ sport['name'] }}</span>
+      <span class="small text-muted">{{ module_count }} module{{ 's' if module_count != 1 }}</span>
+    </div>
+    <div class="card-body">
+      {% if modules %}
+      <div class="list-group list-group-flush">
+        {% for module in modules %}
+        <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0">
+          <div>
+            <span class="fw-semibold">{{ module['name'] }}</span>
+            {% if module['focus'] %}<span class="badge text-bg-light border ms-1">{{ module['focus'] }}</span>{% endif %}
+            <span class="small text-muted d-block">
+              {{ module['exercise_count'] }} exercise{{ 's' if module['exercise_count'] != 1 }}
+              {% if module['circuit_count'] %}&middot; {{ module['circuit_count'] }} circuit{{ 's' if module['circuit_count'] != 1 }}{% endif %}
+              &middot; used in {{ module['day_count'] }} day{{ 's' if module['day_count'] != 1 }}
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">No modules in this sport's library yet. Add them from the sport page, then place them into a day.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% set palette = ['blue', 'violet', 'rose', 'amber'] %}
+<div class="row g-3">
+  {% for d in days %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card stat-card h-100 day-card day-{{ palette[loop.index0 % 4] }}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h2 class="h5 mb-0">
+            <a class="text-decoration-none" href="{{ url_for('sports.day_detail', sport_id=sport['id'], workout_id=workout['id'], day_id=d['id']) }}">
+              <span class="day-index">{{ loop.index }}</span>{{ d['name'] }}
+            </a>
+          </h2>
+          <div class="btn-group">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('sports.day_edit', sport_id=sport['id'], workout_id=workout['id'], day_id=d['id']) }}" title="Edit day">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form class="d-inline" action="{{ url_for('sports.day_delete', sport_id=sport['id'], workout_id=workout['id'], day_id=d['id']) }}"
+                  method="post" onsubmit="return confirm('Delete this workout-day and all its modules?');">
+              <button class="btn btn-sm btn-outline-danger" type="submit" title="Delete day"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
+        </div>
+        {% if d['module_names'] %}
+        <div class="d-flex flex-wrap gap-1 mb-2">
+          {% for name in d['module_names'] %}
+          <span class="badge rounded-pill text-bg-light border">{{ name }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="small text-muted">
+          <i class="bi bi-calendar-day me-1"></i>{{ d['module_count'] }} module{{ 's' if d['module_count'] != 1 }}
+          &middot; <i class="bi bi-list-check me-1"></i>{{ d['exercise_count'] }} exercise{{ 's' if d['exercise_count'] != 1 }}
+          {% if d['circuit_count'] %}&middot; <i class="bi bi-arrow-repeat me-1"></i>{{ d['circuit_count'] }} circuit{{ 's' if d['circuit_count'] != 1 }}{% endif %}
+        </div>
+      </div>
+      <div class="card-footer bg-white d-flex justify-content-between align-items-center gap-2">
+        <a class="btn btn-sm btn-outline-success" href="{{ url_for('sports.module_add_existing', sport_id=sport['id'], workout_id=workout['id'], day_id=d['id']) }}">
+          <i class="bi bi-plus-square me-1"></i>Add module
+        </a>
+        <a class="btn btn-sm btn-success" href="{{ url_for('sports.day_detail', sport_id=sport['id'], workout_id=workout['id'], day_id=d['id']) }}">
+          Open <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-calendar-plus display-4 icon-grad"></i>
+        <p class="mt-3 mb-2">This workout has no days yet. Add a day first, then add modules from the sport library into it.</p>
+        <a class="btn btn-success" href="{{ url_for('sports.day_new', sport_id=sport['id'], workout_id=workout['id']) }}">Add workout-day</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="mt-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">
+    <i class="bi bi-arrow-left me-1"></i>{{ sport['name'] }}
+  </a>
+</div>
+{% endblock %}

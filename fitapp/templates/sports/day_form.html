@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit day' if editing else 'New day' }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">
+          <i class="bi bi-calendar-week me-2"></i>{{ 'Edit workout-day' if editing else 'Add workout-day' }}
+        </span>
+        {% if back_url %}
+        <a class="small" href="{{ back_url }}">Back</a>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="day_name">Day name *</label>
+            <input class="form-control" id="day_name" name="day_name" type="text"
+                   value="{{ day_name or '' }}" placeholder="e.g. Upper body" required>
+            <div class="form-text">Each name a different day, e.g. &ldquo;Day A - Push&rdquo;, &ldquo;Day B - Pull&rdquo;.</div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success" type="submit">
+              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Add day' }}
+            </button>
+            {% if back_url %}
+            <a class="btn btn-outline-secondary" href="{{ back_url }}">Cancel</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

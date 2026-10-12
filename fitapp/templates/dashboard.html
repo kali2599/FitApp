@@ -7,7 +7,7 @@
     <p class="hero-sub mb-0">{{ today.strftime('%A, %d %B %Y') }} · goals, training and nutrition at a glance</p>
   </div>
   <div class="d-flex flex-wrap gap-2 position-relative" style="z-index: 1;">
-    <a class="btn btn-light" href="{{ url_for('workouts.new') }}"><i class="bi bi-lightning-charge-fill me-1"></i>Workout</a>
+    <a class="btn btn-light" href="{{ url_for('sports.new') }}"><i class="bi bi-lightning-charge-fill me-1"></i>Sport</a>
     <a class="btn btn-glass" href="{{ url_for('diets.new') }}"><i class="bi bi-cup-straw me-1"></i>Meal</a>
     <a class="btn btn-glass" href="{{ url_for('goals.new') }}"><i class="bi bi-bullseye me-1"></i>Goal</a>
     <a class="btn btn-glass" href="{{ url_for('stats.new') }}"><i class="bi bi-rulers me-1"></i>Body stats</a>
@@ -22,7 +22,7 @@
 {% endif %}
 
 <div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-4">
     <div class="card stat-card accent-blue h-100">
       <div class="card-body">
         <div class="d-flex align-items-center gap-3 mb-2">
@@ -40,7 +40,7 @@
       </div>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-4">
     <div class="card stat-card accent-fire h-100">
       <div class="card-body">
         <div class="d-flex align-items-center gap-3 mb-2">
@@ -58,21 +58,7 @@
       </div>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
-    <div class="card stat-card h-100">
-      <div class="card-body">
-        <div class="d-flex align-items-center gap-3 mb-2">
-          <span class="stat-icon"><i class="bi bi-emoji-heart-eyes"></i></span>
-          <span class="text-muted small text-uppercase fw-semibold">Training this week</span>
-        </div>
-        <div class="fs-4 fw-bold">{{ week['sessions'] }} session{{ 's' if week['sessions'] != 1 }}</div>
-        <span class="badge bg-success-subtle text-success border border-success-subtle">
-          {{ week['minutes'] }} min &middot; {{ week['burned']|int }} kcal burned
-        </span>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-4">
     <div class="card stat-card accent-red h-100">
       <div class="card-body">
         <div class="d-flex align-items-center gap-3 mb-2">
@@ -136,7 +122,7 @@
 </div>
 
 <div class="row g-3 mb-4">
-  <div class="col-lg-7">
+  <div class="col-12">
     <div class="card shadow-sm border-0 h-100">
       <div class="card-header bg-white fw-semibold"><i class="bi bi-graph-up me-2"></i>Weight &amp; body fat trend</div>
       <div class="card-body">
@@ -144,14 +130,6 @@
         {% if not charts['trend']['labels'] %}
         <p class="text-muted small mb-0">No measurements yet.</p>
         {% endif %}
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-5">
-    <div class="card shadow-sm border-0 h-100">
-      <div class="card-header bg-white fw-semibold"><i class="bi bi-calendar3 me-2"></i>Weekly training volume</div>
-      <div class="card-body">
-        <canvas id="weeklyChart" height="160"></canvas>
       </div>
     </div>
   </div>
@@ -219,45 +197,21 @@
     </div>
   </div>
   <div class="col-lg-6">
-    <div class="row g-3">
-      <div class="col-md-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-header bg-white fw-semibold"><i class="bi bi-emoji-heart-eyes me-2"></i>Recent workouts</div>
-          <ul class="list-group list-group-flush">
-            {% for w in recent_workouts %}
-            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-              <span>
-                <a href="{{ url_for('workouts.session_edit', session_id=w['id']) }}" class="text-decoration-none">
-                  {{ w['workout_name'] or 'Session' }}{% if w['day_name'] %} · {{ w['day_name'] }}{% endif %}
-                </a>
-                <br><span class="small text-muted">{{ w['performed_date'] }}{% if w['workout_type'] %} · {{ w['workout_type'] }}{% endif %}</span>
-              </span>
-              <span class="badge bg-success-subtle text-success border border-success-subtle">{{ w['duration_min'] or '?' }} min</span>
-            </li>
-            {% else %}
-            <li class="list-group-item text-muted small">No workouts logged yet.</li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-header bg-white fw-semibold"><i class="bi bi-cup-straw me-2"></i>Recent meals</div>
-          <ul class="list-group list-group-flush">
-            {% for m in recent_meals %}
-            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-              <span>
-                <a href="{{ url_for('diets.edit', entry_id=m['id']) }}" class="text-decoration-none">{{ m['description'] }}</a>
-                <br><span class="small text-muted">{{ m['diet_date'] }} &middot; {{ m['meal_type'] }}</span>
-              </span>
-              <span class="badge bg-warning-subtle border">{{ m['calories']|int if m['calories'] else 0 }} kcal</span>
-            </li>
-            {% else %}
-            <li class="list-group-item text-muted small">No meals yet.</li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-cup-straw me-2"></i>Recent meals</div>
+      <ul class="list-group list-group-flush">
+        {% for m in recent_meals %}
+        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+          <span>
+            <a href="{{ url_for('diets.edit', entry_id=m['id']) }}" class="text-decoration-none">{{ m['description'] }}</a>
+            <br><span class="small text-muted">{{ m['diet_date'] }} &middot; {{ m['meal_type'] }}</span>
+          </span>
+          <span class="badge bg-warning-subtle border">{{ m['calories']|int if m['calories'] else 0 }} kcal</span>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted small">No meals yet.</li>
+        {% endfor %}
+      </ul>
     </div>
   </div>
 </div>
@@ -288,22 +242,6 @@
       }
     });
   }
-
-  new Chart(document.getElementById('weeklyChart'), {
-    type: 'bar',
-    data: {
-      labels: charts.weekly.labels,
-      datasets: [
-        { label: 'Minutes', data: charts.weekly.minutes, backgroundColor: '#7c3aed', borderRadius: 6 },
-        { label: 'Sessions', data: charts.weekly.sessions, backgroundColor: '#ef4444', borderRadius: 6 }
-      ]
-    },
-    options: {
-      maintainAspectRatio: true,
-      scales: { x: { stacked: false, grid: { display: false } }, y: { beginAtZero: true, grid } },
-      plugins: { legend: { position: 'bottom' } }
-    }
-  });
 
   new Chart(document.getElementById('caloriesChart'), {
     type: 'bar',

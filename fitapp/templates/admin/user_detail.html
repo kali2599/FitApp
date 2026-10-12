@@ -23,9 +23,10 @@
 </div>
 
 <div class="row g-3 mb-3">
-  {% for key, icon, label in [('workouts', 'bi-emoji-heart-eyes', 'Workouts'),
-                              ('days', 'bi-calendar-day', 'Modules'),
-                              ('sessions', 'bi-clipboard-check', 'Sessions'),
+  {% for key, icon, label in [('sports', 'bi-lightning-charge-fill', 'Sports'),
+                              ('workouts', 'bi-layers', 'Workouts'),
+                              ('days', 'bi-calendar-week', 'Days'),
+                              ('modules', 'bi-calendar-day', 'Modules'),
                               ('goals', 'bi-bullseye', 'Goals'),
                               ('meals', 'bi-cup-straw', 'Meals'),
                               ('measurements', 'bi-rulers', 'Measurements')] %}
@@ -40,44 +41,22 @@
   {% endfor %}
 </div>
 
-{% if workouts %}
+{% if sports %}
 <div class="card shadow-sm border-0 mb-3">
-  <div class="card-header fw-semibold"><i class="bi bi-emoji-heart-eyes me-2"></i>Workouts</div>
+  <div class="card-header fw-semibold"><i class="bi bi-lightning-charge-fill me-2"></i>Sports</div>
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>Name</th><th>Type</th><th class="text-center">Modules</th><th class="text-center">Exercises</th></tr></thead>
+        <thead class="table-light"><tr><th>Sport</th><th>Type</th><th class="text-center">Workouts</th><th class="text-center">Days</th><th class="text-center">Modules</th><th class="text-center">Exercises</th></tr></thead>
         <tbody>
-          {% for w in workouts %}
+          {% for s in sports %}
           <tr>
-            <td>{{ w['name'] }}</td>
-            <td><span class="badge text-bg-light border">{{ w['workout_type'] }}</span></td>
-            <td class="text-center">{{ w['day_count'] }}</td>
-            <td class="text-center">{{ w['exercise_count'] }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-{% if sessions %}
-<div class="card shadow-sm border-0 mb-3">
-  <div class="card-header fw-semibold"><i class="bi bi-clipboard-check me-2"></i>Recent sessions</div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>Date</th><th>Workout</th><th>Module</th><th class="text-end">Minutes</th><th class="text-end">Calories</th></tr></thead>
-        <tbody>
-          {% for s in sessions %}
-          <tr>
-            <td>{{ s['performed_date'] }}</td>
-            <td>{{ s['workout_name'] or '—' }}</td>
-            <td>{{ s['day_name'] or '—' }}</td>
-            <td class="text-end">{{ s['duration_min'] or '—' }}</td>
-            <td class="text-end">{{ s['calories'] or '—' }}</td>
+            <td>{{ s['name'] }}</td>
+            <td><span class="badge text-bg-light border">{{ s['sport_type'] }}</span></td>
+            <td class="text-center">{{ s['workout_count'] }}</td>
+            <td class="text-center">{{ s['day_count'] }}</td>
+            <td class="text-center">{{ s['module_count'] }}</td>
+            <td class="text-center">{{ s['exercise_count'] }}</td>
           </tr>
           {% endfor %}
         </tbody>

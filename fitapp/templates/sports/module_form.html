@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Edit module' if day_id else 'New module' }} · {{ workout['name'] }}{% endblock %}
+{% block title %}{{ 'Edit module' if module_id else 'New module' }} · {{ sport['name'] }}{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-11">
@@ -7,30 +7,31 @@
       <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <span class="fw-semibold">
           <i class="bi bi-calendar-day me-2"></i>
-          {{ 'Edit workout-module' if day_id else 'Add workout-module' }}
+          {{ 'Edit module' if module_id else 'Add module' }}
+          <span class="small text-muted fw-normal ms-1">{{ sport['name'] }} library</span>
           <span class="badge
-            {% if workout['workout_type'] == 'gym' %}text-bg-primary
-            {% elif workout['workout_type'] == 'cardio' %}text-bg-danger
-            {% else %}text-bg-dark{% endif %} ms-1">{{ workout['workout_type'] }}</span>
+            {% if sport['sport_type'] == 'gym' %}text-bg-primary
+            {% elif sport['sport_type'] == 'cardio' %}text-bg-danger
+            {% else %}text-bg-dark{% endif %} ms-1">{{ sport['sport_type'] }}</span>
         </span>
-        <a class="small" href="{{ url_for('workouts.detail', workout_id=workout['id']) }}">Back to workout</a>
+        <a class="small" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">Back to {{ sport['name'] }}</a>
       </div>
       <div class="card-body">
-        <form method="post" novalidate id="dayForm">
+        <form method="post" novalidate id="moduleForm">
           <div class="row">
             <div class="col-md-5 mb-3">
-              <label class="form-label" for="day_name">Module name *</label>
-              <input class="form-control" id="day_name" name="day_name" type="text"
+              <label class="form-label" for="module_name">Module name *</label>
+              <input class="form-control" id="module_name" name="module_name" type="text"
                      placeholder="e.g. Module 1 - Push" required>
             </div>
             <div class="col-md-4 mb-3">
-              <label class="form-label" for="day_focus">Focus</label>
-              <input class="form-control" id="day_focus" name="day_focus" type="text"
+              <label class="form-label" for="module_focus">Focus</label>
+              <input class="form-control" id="module_focus" name="module_focus" type="text"
                      placeholder="Chest, shoulders, triceps">
             </div>
             <div class="col-md-3 mb-3">
-              <label class="form-label" for="day_notes">Notes</label>
-              <input class="form-control" id="day_notes" name="day_notes" type="text" placeholder="Optional">
+              <label class="form-label" for="module_notes">Notes</label>
+              <input class="form-control" id="module_notes" name="module_notes" type="text" placeholder="Optional">
             </div>
           </div>
 
@@ -60,7 +61,7 @@
             <button class="btn btn-success" type="submit">
               <i class="bi bi-check-lg me-1"></i>Save
             </button>
-            <a class="btn btn-outline-secondary" href="{{ url_for('workouts.detail', workout_id=workout['id']) }}">Cancel</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">Cancel</a>
           </div>
         </form>
       </div>
@@ -73,7 +74,7 @@
 <script>
   const CATALOG = {{ catalog|tojson }};
   const INITIAL = {{ data|tojson }};
-  const WORKOUT_TYPE = {{ workout['workout_type']|tojson }};
+  const WORKOUT_TYPE = {{ sport['sport_type']|tojson }};
   const ACTIVITIES = ['run', 'swimming', 'spinning'];
 
   let circuits = INITIAL.circuits.map((c, i) => ({
@@ -82,9 +83,9 @@
   }));
   let exercises = INITIAL.exercises.map(e => ({ ...e }));
 
-  document.getElementById('day_name').value = INITIAL.name || '';
-  document.getElementById('day_focus').value = INITIAL.focus || '';
-  document.getElementById('day_notes').value = INITIAL.notes || '';
+  document.getElementById('module_name').value = INITIAL.name || '';
+  document.getElementById('module_focus').value = INITIAL.focus || '';
+  document.getElementById('module_notes').value = INITIAL.notes || '';
 
   const circuitEl = document.getElementById('circuitRows');
   const exerciseEl = document.getElementById('exerciseRows');
@@ -380,7 +381,7 @@
   });
 
   // serialize a custom exercise under the real ex_name field on submit
-  document.getElementById('dayForm').addEventListener('submit', () => {
+  document.getElementById('moduleForm').addEventListener('submit', () => {
     exerciseEl.querySelectorAll('[data-eidx]').forEach(row => {
       const custom = row.querySelector('.ex-custom');
       if (!custom || custom.classList.contains('d-none')) return;
