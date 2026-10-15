@@ -1,11 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Admin · {{ user['username'] }}{% endblock %}
-{% block back %}
-<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('admin.index') }}">
-  <i class="bi bi-arrow-left me-1"></i>All users
-</a>
-{% endblock %}
 {% block content %}
+{% include "admin/_tabs.html" %}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <div>
     <h1 class="h3 mb-1 mt-1">

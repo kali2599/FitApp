@@ -24,10 +24,24 @@ you eat, chase your goals, and watch your body change.
   recent activity at a glance.
 - **Private by default** — secure login, with your data stored locally and separated
   per user.
-- **Admin tools** — user management for administrators.
+- **Admin tools** — a separate role for administrators: manage users and
+  application settings only.
 
 All data is private per user and stored in a local SQLite database
 (`instance/fitapp.db`, auto-created on first run).
+
+## Roles
+
+- **user** — the normal account: sports, library, diet, goals, body stats,
+  dashboard and profile.
+- **admin** — a management-only account. Admins get the **Admin** area
+  (user management + application settings) and the **Profile** page, but *not*
+  the personal sections: they are redirected away from the dashboard, sports,
+  library, diet, goals and body stats. Admins can inspect a user's data from the
+  admin area and reset a user's password, but cannot manage their own training
+  or nutrition. Admin accounts are hidden from the user list.
+
+Create an admin with the CLI: `./.venv/bin/python user.py create --admin ...`.
 
 ## Setup
 

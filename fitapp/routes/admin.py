@@ -47,13 +47,19 @@ def _get_user(db, user_id):
 def index():
     db = get_db()
     users = db.execute(
-        "SELECT * FROM users ORDER BY created_at DESC, id DESC"
+        "SELECT * FROM users WHERE role != 'admin' ORDER BY created_at DESC, id DESC"
     ).fetchall()
     rows = []
     for user in users:
         row = {"user": user, "counts": _counts(db, user["id"])}
         rows.append(row)
     return render_template("admin/index.html", users=rows)
+
+
+@bp.route("/settings")
+@admin_required
+def settings():
+    return render_template("admin/settings.html")
 
 
 @bp.route("/users/<int:user_id>")

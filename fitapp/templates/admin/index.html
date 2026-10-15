@@ -2,8 +2,10 @@
 {% block title %}Admin · Users{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0"><i class="bi bi-shield-lock me-2"></i>Users</h1>
+  <h1 class="h3 mb-0"><i class="bi bi-shield-lock me-2"></i>Admin</h1>
 </div>
+
+{% include "admin/_tabs.html" %}
 
 <div class="card shadow-sm border-0">
   <div class="card-body p-0">
@@ -12,7 +14,6 @@
         <thead class="table-light">
           <tr>
             <th>User</th>
-            <th>Role</th>
             <th class="text-center">Sports</th>
             <th class="text-center">Workouts</th>
             <th class="text-center">Days</th>
@@ -35,13 +36,6 @@
               </a>
               <div class="small text-muted">{{ u['email'] }}</div>
             </td>
-            <td>
-              {% if u['role'] == 'admin' %}
-              <span class="badge text-bg-dark">admin</span>
-              {% else %}
-              <span class="badge text-bg-secondary">user</span>
-              {% endif %}
-            </td>
             <td class="text-center">{{ c['sports'] }}</td>
             <td class="text-center">{{ c['workouts'] }}</td>
             <td class="text-center">{{ c['days'] }}</td>
@@ -55,6 +49,10 @@
                 <i class="bi bi-eye me-1"></i>View
               </a>
             </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="10" class="text-center text-muted py-4">No users yet.</td>
           </tr>
           {% endfor %}
         </tbody>

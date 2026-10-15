@@ -14,12 +14,6 @@
   </div>
 </div>
 
-{% if g.user['role'] == 'admin' %}
-<nav class="nav nav-pills admin-tabs mb-4">
-  <a class="nav-link" href="{{ url_for('admin.index') }}"><i class="bi bi-people me-1"></i>Users</a>
-</nav>
-{% endif %}
-
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-4">
     <div class="card stat-card accent-blue h-100">

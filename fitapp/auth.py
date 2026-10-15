@@ -19,6 +19,12 @@ bp = Blueprint("auth", __name__)
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+# Personal fitness sections that admins do not use: the admin role is limited to
+# user management and application settings.
+ADMIN_BLOCKED_BLUEPRINTS = frozenset(
+    {"dashboard", "sports", "library", "diets", "goals", "stats"}
+)
+
 
 def load_current_user():
     user_id = session.get("user_id")
@@ -59,6 +65,11 @@ def admin_required(view):
 @bp.before_app_request
 def _load_user():
     load_current_user()
+    if g.user is not None and g.user["role"] == "admin":
+        blueprint = (request.endpoint or "").split(".", 1)[0]
+        if blueprint in ADMIN_BLOCKED_BLUEPRINTS:
+            flash("Admin accounts manage users and settings only.", "warning")
+            return redirect(url_for("admin.index"))
 
 
 @bp.route("/signup", methods=("GET", "POST"))

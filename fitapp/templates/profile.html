@@ -109,9 +109,11 @@
         {% else %}
         <p class="text-muted mb-2">No body statistics recorded yet.</p>
         {% endif %}
+        {% if g.user['role'] != 'admin' %}
         <div class="mt-3">
           <a class="btn btn-sm btn-outline-success" href="{{ url_for('stats.index') }}">Manage body stats</a>
         </div>
+        {% endif %}
       </div>
     </div>
 

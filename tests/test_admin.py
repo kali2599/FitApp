@@ -51,3 +51,60 @@ def test_admin_user_detail_shows_day_sets(client, db):
     # the exercise count on the detail page comes from day_entry_sets
     assert "day_exercises" not in body
     assert boss  # admin session active
+
+
+PERSONAL_PAGES = ["/", "/sports/", "/diets/", "/goals/", "/stats/"]
+
+
+def test_admin_redirected_from_personal_sections(client, db):
+    make_admin(client, "boss")
+    for path in PERSONAL_PAGES:
+        r = client.get(path)
+        assert r.status_code == 302, path
+        assert "/admin" in r.headers["Location"], f"{path} -> {r.headers['Location']}"
+
+
+def test_admin_blocked_post_creates_nothing(client, db):
+    make_admin(client, "boss")
+    r = client.post("/sports/new", data={"name": "Sneaky"})
+    assert r.status_code == 302
+    assert scalar(db, "SELECT COUNT(*) FROM sports WHERE name = 'Sneaky'") == 0
+
+
+def test_admin_redirected_from_library_keeps_profile(client, db):
+    make_admin(client, "boss")
+    r = client.get("/library/")
+    assert r.status_code == 302
+    assert "/admin" in r.headers["Location"]
+    assert client.get("/profile/").status_code == 200
+
+
+def test_admin_not_listed_in_user_view(client, db):
+    make_user(client, "alice")
+    make_admin(client, "boss")
+    body = client.get("/admin/").get_data(as_text=True)
+    assert "alice@example.com" in body
+    assert "boss@example.com" not in body
+
+
+def test_admin_settings_page(client, db):
+    make_admin(client, "boss")
+    r = client.get("/admin/settings")
+    assert r.status_code == 200
+    body = r.get_data(as_text=True)
+    assert "Application settings" in body
+    assert "Traceback" not in body
+
+
+def test_admin_nav_hides_personal_links(client, db):
+    make_admin(client, "boss")
+    body = client.get("/admin/").get_data(as_text=True)
+    for frag in ("/sports", "/diets", "/goals", "/stats", "/library"):
+        assert frag not in body, frag
+    assert "/admin" in body
+
+
+def test_regular_user_nav_keeps_sections(client, db):
+    make_user(client, "tester")
+    body = client.get("/").get_data(as_text=True)
+    assert "/sports" in body and "/diets" in body and "/goals" in body and "/stats" in body
