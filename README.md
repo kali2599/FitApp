@@ -15,7 +15,7 @@ you eat, chase your goals, and watch your body change.
   apply to that day only. Reuse a module across days and sports; edit it once and
   every dependent day re-syncs.
 - **Track your diet** — log meals with calories and macros and see your daily totals.
-- **Set goals, watch progress** — body, skill and strength goals with automatic
+- **Set goals, watch progress** — body, skill, strength and cardio goals with automatic
   progress tracking and a simple way to log each step.
 - **Understand your body** — record weight, body fat and measurements over time and
   get a personal report: BMI, BMR, TDEE, calorie & macro targets, and tailored diet,

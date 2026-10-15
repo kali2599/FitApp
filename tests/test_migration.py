@@ -167,3 +167,73 @@ def test_migration_preserves_existing_library(tmp_path):
     assert _count(path, "library_exercises") == 1
     # legacy tables are still dropped even though migration short-circuited
     assert not (set(LEGACY_TABLES) & _tables(path))
+
+
+OLD_CHECK_SQL = """
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE library_exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    position INTEGER NOT NULL DEFAULT 0,
+    name TEXT NOT NULL, muscles TEXT,
+    label TEXT CHECK (label IN ('strength', 'skill')), notes TEXT
+);
+CREATE TABLE goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    goal_type TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength')),
+    category TEXT NOT NULL, target_value TEXT NOT NULL,
+    unit TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels')),
+    start_value TEXT, target_date TEXT,
+    status TEXT NOT NULL DEFAULT 'active'
+           CHECK (status IN ('active', 'achieved', 'abandoned')),
+    notes TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE goal_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    goal_id INTEGER NOT NULL REFERENCES goals (id) ON DELETE CASCADE,
+    value TEXT NOT NULL, logged_date TEXT NOT NULL, notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+INSERT INTO users (id, username, email, password_hash) VALUES (1, 'u', 'u@e.com', 'x');
+INSERT INTO library_exercises (id, user_id, position, name, label) VALUES (1, 1, 0, 'Sprint', 'skill');
+INSERT INTO goals (id, user_id, goal_type, category, target_value, unit)
+    VALUES (1, 1, 'strength', 'Squat', '60', 'kg');
+INSERT INTO goal_logs (id, user_id, goal_id, value, logged_date)
+    VALUES (1, 1, 1, '60', '2026-01-01');
+"""
+
+
+def test_old_checks_are_widened_for_cardio(tmp_path):
+    """Databases built with the old label/goal CHECKs are rebuilt for cardio."""
+    path = str(tmp_path / "old_check.db")
+    con = sqlite3.connect(path)
+    con.executescript(OLD_CHECK_SQL)
+    con.commit()
+    con.close()
+
+    create_app({"DATABASE": path, "TESTING": True})
+
+    # existing rows survive the table rebuilds
+    assert _count(path, "library_exercises") == 1
+    assert _count(path, "goals") == 1
+    assert _count(path, "goal_logs") == 1
+
+    con = sqlite3.connect(path)
+    con.execute(
+        "INSERT INTO library_exercises (user_id, name, label) VALUES (1, 'Rowing', 'cardio')"
+    )
+    con.execute(
+        "INSERT INTO goals (user_id, goal_type, category, target_value, unit) "
+        "VALUES (1, 'cardio', 'Running', '5', 'km/min')"
+    )
+    con.commit()
+    con.close()
+
+    assert _count(path, "library_exercises") == 2
+    assert _count(path, "goals") == 2

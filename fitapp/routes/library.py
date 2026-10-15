@@ -37,7 +37,7 @@ MUSCLES = [
     "Neck",
     "Full body",
 ]
-LABELS = ["strength", "skill"]
+LABELS = ["strength", "skill", "cardio"]
 
 
 # --------------------------------------------------------------------------- #

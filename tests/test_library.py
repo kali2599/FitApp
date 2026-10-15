@@ -159,3 +159,42 @@ def test_goals_suggestions_come_from_library(client, db):
     r = client.get("/goals/new")
     assert r.status_code == 200
     assert "Handstand" in r.get_data(as_text=True)
+
+
+def test_cardio_label_and_goal(client, db):
+    make_user(client, "tester")
+    r = client.post(
+        "/library/exercises/new",
+        data={"name": "Rowing", "label": "cardio", "muscles": []},
+    )
+    assert r.status_code == 302
+    row = db.execute("SELECT * FROM library_exercises WHERE name = 'Rowing'").fetchone()
+    assert row["label"] == "cardio"
+
+    # the cardio label and the labelled exercise appear on the goal form
+    body = client.get("/goals/new").get_data(as_text=True)
+    assert "cardio" in body
+    assert "Rowing" in body
+
+    # a cardio goal with a distance unit is accepted
+    r = client.post(
+        "/goals/new",
+        data={"goal_type": "cardio", "category": "Running", "unit": "km/min",
+              "target_value": "5", "status": "active"},
+    )
+    assert r.status_code == 302
+    goal = db.execute("SELECT * FROM goals WHERE category = 'Running'").fetchone()
+    assert goal["goal_type"] == "cardio"
+    assert goal["unit"] == "km/min"
+
+    # a unit that cardio does not allow is rejected
+    r = client.post(
+        "/goals/new",
+        data={"goal_type": "cardio", "category": "Running", "unit": "kg",
+              "target_value": "5", "status": "active"},
+    )
+    assert r.status_code == 400
+
+    # the label field still rejects unknown values
+    r = client.post("/library/exercises/new", data={"name": "Nope", "label": "bogus", "muscles": []})
+    assert r.status_code == 400

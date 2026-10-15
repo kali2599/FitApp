@@ -12,10 +12,9 @@ def test_all_pages_render(client, db):
         assert "Traceback" not in r.get_data(as_text=True), path
 
 
-def test_no_gym_or_cardio_language(client, db):
+def test_no_gym_language(client, db):
     make_user(client, "tester")
     body = "".join(client.get(p).get_data(as_text=True) for p in ("/sports/", "/library/"))
-    assert "cardio" not in body.lower()
     assert "gym" not in body.lower()
 
 

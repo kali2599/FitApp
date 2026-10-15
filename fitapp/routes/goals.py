@@ -17,15 +17,16 @@ from ..utils import to_date, to_float
 
 bp = Blueprint("goals", __name__, url_prefix="/goals")
 
-GOAL_TYPES = ["body", "skill", "strength"]
+GOAL_TYPES = ["body", "skill", "strength", "cardio"]
 STATUSES = ["active", "achieved", "abandoned"]
 
 UNIT_BY_TYPE = {
     "body": ["kg", "%"],
     "skill": ["seconds", "reps"],
     "strength": ["kg", "reps"],
+    "cardio": ["meters", "kilometers", "km/min", "%"],
 }
-NUMERIC_UNITS = {"kg", "%", "seconds", "reps"}
+NUMERIC_UNITS = {"kg", "%", "seconds", "reps", "meters", "kilometers", "km/min", "minutes"}
 
 CATEGORY_SUGGESTIONS = {
     "body": ["Weight", "Body fat"],
@@ -47,6 +48,16 @@ CATEGORY_SUGGESTIONS = {
         "Push-up",
         "Barbell row",
     ],
+    "cardio": [
+        "Running",
+        "Walking",
+        "Cycling",
+        "Rowing",
+        "Swimming",
+        "Jump rope",
+        "Elliptical",
+        "Stair climber",
+    ],
 }
 
 
@@ -59,10 +70,15 @@ def _library_exercises(db):
 
 
 def _menu_catalog(db):
-    menu = {"strength": [], "skill": []}
+    menu = {
+        "strength": [],
+        "skill": [],
+        "cardio": list(CATEGORY_SUGGESTIONS["cardio"]),
+    }
     for row in _library_exercises(db):
-        if row["label"] in menu:
-            menu[row["label"]].append(row["name"])
+        label = row["label"]
+        if label in menu and row["name"] not in menu[label]:
+            menu[label].append(row["name"])
     return menu
 
 

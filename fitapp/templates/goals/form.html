@@ -77,7 +77,8 @@
 
           <p class="small text-muted">
             Body uses your latest measurement, Strength uses your best matching exercise,
-            Skill uses your longest hold (seconds) or best reps.
+            Skill uses your longest hold (seconds) or best reps,
+            Cardio tracks distance (meters/kilometers), pace (km/min) or incline (%).
           </p>
 
           <div class="d-flex gap-2">
@@ -173,7 +174,7 @@
 
   function refreshCategory() {
     const type = typeSelect.value;
-    if (type === 'strength' || type === 'skill') {
+    if (type !== 'body') {
       fillMenu(type);
       const listed = menuCatalog[type] || [];
       const name = String(current.category || '');

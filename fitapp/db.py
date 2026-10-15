@@ -80,10 +80,10 @@ CREATE TABLE IF NOT EXISTS body_stats (
 CREATE TABLE IF NOT EXISTS goals (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength')),
+    goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength', 'cardio')),
     category     TEXT NOT NULL,
     target_value TEXT NOT NULL,
-    unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels')),
+    unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels', 'meters', 'kilometers', 'km/min', 'minutes')),
     start_value  TEXT,
     target_date  TEXT,
     status       TEXT NOT NULL DEFAULT 'active'
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS library_exercises (
     position INTEGER NOT NULL DEFAULT 0,
     name     TEXT NOT NULL,
     muscles  TEXT,
-    label    TEXT CHECK (label IN ('strength', 'skill')),
+    label    TEXT CHECK (label IN ('strength', 'skill', 'cardio')),
     notes    TEXT
 );
 
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS library_exercises (
     position INTEGER NOT NULL DEFAULT 0,
     name     TEXT NOT NULL,
     muscles  TEXT,
-    label    TEXT CHECK (label IN ('strength', 'skill')),
+    label    TEXT CHECK (label IN ('strength', 'skill', 'cardio')),
     notes    TEXT
 );
 
@@ -564,6 +564,78 @@ def _migrate_drop_legacy(db):
         db.execute("PRAGMA foreign_keys = ON")
 
 
+def _migrate_exercise_labels(db):
+    """Widen the library exercise label CHECK to include 'cardio'.
+
+    SQLite cannot alter a CHECK constraint, so the table is rebuilt in place
+    with ids preserved (foreign keys are switched off during the swap).
+    """
+    row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'library_exercises'"
+    ).fetchone()
+    if row is None or "'cardio'" in (row["sql"] or ""):
+        return
+
+    db.execute("PRAGMA foreign_keys = OFF")
+    try:
+        db.executescript("""
+            CREATE TABLE library_exercises_new (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id  INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                position INTEGER NOT NULL DEFAULT 0,
+                name     TEXT NOT NULL,
+                muscles  TEXT,
+                label    TEXT CHECK (label IN ('strength', 'skill', 'cardio')),
+                notes    TEXT
+            );
+            INSERT INTO library_exercises_new (id, user_id, position, name, muscles, label, notes)
+                SELECT id, user_id, position, name, muscles, label, notes FROM library_exercises;
+            DROP TABLE library_exercises;
+            ALTER TABLE library_exercises_new RENAME TO library_exercises;
+        """)
+    finally:
+        db.execute("PRAGMA foreign_keys = ON")
+
+
+def _migrate_goal_cardio(db):
+    """Widen the goals CHECKs to allow cardio goals and distance/time units."""
+    row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'goals'"
+    ).fetchone()
+    if row is None:
+        return
+    sql = row["sql"] or ""
+    if "'cardio'" in sql and "'km/min'" in sql:
+        return
+
+    db.execute("PRAGMA foreign_keys = OFF")
+    try:
+        db.executescript("""
+            CREATE TABLE goals_new (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength', 'cardio')),
+                category     TEXT NOT NULL,
+                target_value TEXT NOT NULL,
+                unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels', 'meters', 'kilometers', 'km/min', 'minutes')),
+                start_value  TEXT,
+                target_date  TEXT,
+                status       TEXT NOT NULL DEFAULT 'active'
+                             CHECK (status IN ('active', 'achieved', 'abandoned')),
+                notes        TEXT,
+                created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+            INSERT INTO goals_new (id, user_id, goal_type, category, target_value, unit,
+                                   start_value, target_date, status, notes, created_at)
+                SELECT id, user_id, goal_type, category, target_value, unit,
+                       start_value, target_date, status, notes, created_at FROM goals;
+            DROP TABLE goals;
+            ALTER TABLE goals_new RENAME TO goals;
+        """)
+    finally:
+        db.execute("PRAGMA foreign_keys = ON")
+
+
 def _migrate_roles(db):
     if not db.execute(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'"
@@ -582,6 +654,8 @@ def init_db():
     _migrate_drop_sport_type(db)
     _migrate_unified_library(db)
     _migrate_drop_legacy(db)
+    _migrate_exercise_labels(db)
+    _migrate_goal_cardio(db)
     _migrate_roles(db)
     db.executescript(SCHEMA)
     db.commit()
