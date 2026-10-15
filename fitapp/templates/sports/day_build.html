@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Build day · {{ day['name'] }}{% endblock %}
+{% block back %}
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('sports.day_detail', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id']) }}">
+  <i class="bi bi-arrow-left me-1"></i>Back to day
+</a>
+{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <h1 class="h3 mb-0">Build &ldquo;{{ day['name'] }}&rdquo;</h1>
+    <p class="text-muted mb-0">Add modules, mini-circuits or single exercises, then set the numbers for this day.</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-0">
+      <div class="card-header fw-semibold"><i class="bi bi-plus-square me-2"></i>Add to day</div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          <input type="hidden" name="action" value="add">
+          <div class="mb-3">
+            <label class="form-label" for="target">Library item</label>
+            <select class="form-select" name="target" id="target" required>
+              <optgroup label="Modules">
+                {% for m in modules %}
+                <option value="m:{{ m['id'] }}">{{ m['name'] }} ({{ m['item_count'] }} items)</option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Mini-circuits">
+                {% for c in circuits %}
+                <option value="c:{{ c['id'] }}">{{ c['name'] }}</option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Exercises">
+                {% for e in exercises %}
+                <option value="e:{{ e['id'] }}">{{ e['name'] }}</option>
+                {% endfor %}
+              </optgroup>
+            </select>
+          </div>
+          <button class="btn btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>Add</button>
+        </form>
+        <hr>
+        <p class="small text-muted mb-0">
+          Manage your items in the <a href="{{ url_for('library.index') }}">Library</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    {% if not entries %}
+    <div class="card shadow-sm border-0">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-list-check display-4 icon-grad"></i>
+        <p class="mt-3 mb-0">Nothing in this day yet. Add an item to get started.</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {% for block in entries %}
+    {% set entry = block['entry'] %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="fw-semibold">
+          <i class="bi bi-list-check me-2 text-blue"></i>
+          {% if entry['module_id'] %}{{ entry['module_name'] }}
+          {% elif entry['circuit_id'] %}{{ entry['circuit_name'] }} <span class="small text-muted">(mini-circuit)</span>
+          {% else %}{{ entry['exercise_name'] }}{% endif %}
+        </span>
+        <form method="post"
+              action="{{ url_for('sports.day_entry_remove', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id'], entry_id=entry['id']) }}"
+              onsubmit="return confirm('Remove this item from the day?');">
+          <button class="btn btn-sm btn-outline-danger" type="submit" title="Remove"><i class="bi bi-x-lg"></i></button>
+        </form>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="action" value="save">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="min-width:8rem">Exercise</th>
+                  <th style="width:5rem">Sets</th>
+                  <th style="width:5rem">Reps</th>
+                  <th style="width:6rem">Weight (kg)</th>
+                  <th style="width:6rem">Sec</th>
+                  <th style="width:6rem">Min</th>
+                  <th style="width:6rem">Km</th>
+                  <th style="width:5rem">Rest (s)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in block['sets'] %}
+                <tr>
+                  <td>
+                    <input type="hidden" name="set_id" value="{{ s['id'] }}">
+                    {{ s['exercise_name'] }}
+                    {% if s['circuit_id'] %}<span class="badge text-bg-light border ms-1"><i class="bi bi-arrow-repeat me-1"></i>circuit</span>{% endif %}
+                  </td>
+                  <td><input class="form-control form-control-sm" name="sets_{{ s['id'] }}" value="{{ s['sets'] if s['sets'] is not none else '' }}"></td>
+                  <td><input class="form-control form-control-sm" name="reps_{{ s['id'] }}" value="{{ s['reps'] if s['reps'] is not none else '' }}"></td>
+                  <td><input class="form-control form-control-sm" name="weight_{{ s['id'] }}" value="{{ s['weight_kg'] if s['weight_kg'] is not none else '' }}"></td>
+                  <td><input class="form-control form-control-sm" name="duration_sec_{{ s['id'] }}" value="{{ s['duration_sec'] if s['duration_sec'] is not none else '' }}"></td>
+                  <td><input class="form-control form-control-sm" name="duration_min_{{ s['id'] }}" value="{{ s['duration_min'] if s['duration_min'] is not none else '' }}"></td>
+                  <td><input class="form-control form-control-sm" name="distance_{{ s['id'] }}" value="{{ s['distance_km'] if s['distance_km'] is not none else '' }}"></td>
+                  <td><input class="form-control form-control-sm" name="rest_{{ s['id'] }}" value="{{ s['rest_sec'] if s['rest_sec'] is not none else '' }}"></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-2">
+            <button class="btn btn-sm btn-success" type="submit"><i class="bi bi-save me-1"></i>Save</button>
+            <span class="small text-muted ms-2">Tip: type <code>max</code> for max reps / weight / duration.</span>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

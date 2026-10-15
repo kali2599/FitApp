@@ -1,122 +1,74 @@
 {% extends "base.html" %}
 {% block title %}{{ day['name'] }} · {{ workout['name'] }}{% endblock %}
+{% block back %}
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('sports.workout_detail', sport_id=sport['id'], workout_id=workout['id']) }}">
+  <i class="bi bi-arrow-left me-1"></i>{{ workout['name'] }}
+</a>
+{% endblock %}
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
   <div>
     <div class="d-flex align-items-center gap-2 flex-wrap">
-      <a class="small text-decoration-none text-muted" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">{{ sport['name'] }}</a>
-      <span class="text-muted">&rsaquo;</span>
-      <a class="small text-decoration-none text-muted" href="{{ url_for('sports.workout_detail', sport_id=sport['id'], workout_id=workout['id']) }}">{{ workout['name'] }}</a>
-      <span class="text-muted">&rsaquo;</span>
       <h1 class="h3 mb-0">{{ day['name'] }}</h1>
-      <span class="badge
-        {% if sport['sport_type'] == 'gym' %}text-bg-primary
-        {% elif sport['sport_type'] == 'cardio' %}text-bg-danger
-        {% else %}text-bg-dark{% endif %}">{{ sport['sport_type'] }}</span>
     </div>
-    <p class="text-muted mb-0 mt-1">{{ day_modules|length }} module{{ 's' if day_modules|length != 1 }}</p>
+    <p class="text-muted mb-0 mt-1">{{ entries|length }} item{{ 's' if entries|length != 1 }}</p>
   </div>
   <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-success" href="{{ url_for('sports.module_add_existing', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id']) }}">
-      <i class="bi bi-plus-square me-1"></i>Add module from library
+    <a class="btn btn-success" href="{{ url_for('sports.day_build', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id']) }}">
+      <i class="bi bi-plus-square me-1"></i>Add to day
     </a>
     <a class="btn btn-outline-secondary" href="{{ url_for('sports.day_edit', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id']) }}">
       <i class="bi bi-pencil me-1"></i>Edit day
     </a>
     <form class="d-inline" action="{{ url_for('sports.day_delete', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id']) }}"
-          method="post" onsubmit="return confirm('Delete this workout-day and all its modules?');">
+          method="post" onsubmit="return confirm('Delete this workout-day and its items?');">
       <button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash me-1"></i>Delete day</button>
     </form>
   </div>
 </div>
 
-{% for mb in day_modules %}
-{% set module = mb['module'] %}
-{% set counter = namespace(n=0) %}
+{% for en in entries %}
+{% set entry = en['entry'] %}
+{% set sets = en['sets'] %}
 <div class="card shadow-sm mb-3">
   <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div class="d-flex align-items-center gap-2">
       <span class="fw-semibold">
-        <i class="bi bi-calendar-day me-2 text-blue"></i>{{ module['name'] }}
-        {% if module['focus'] %}<span class="badge text-bg-light border ms-1">{{ module['focus'] }}</span>{% endif %}
+        <i class="bi bi-list-check me-2 text-blue"></i>
+        {% if entry['module_id'] %}
+          {{ entry['module_name'] }}
+        {% elif entry['circuit_id'] %}
+          {{ entry['circuit_name'] }} (mini-circuit)
+        {% else %}
+          {{ entry['exercise_name'] }}
+        {% endif %}
       </span>
-    </div>
-    <div class="btn-group">
-      <form class="d-inline" action="{{ url_for('sports.module_remove_from_day', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id'], module_id=module['id']) }}"
-            method="post" onsubmit="return confirm('Remove this module from the day? It stays in the sport library.');">
-        <button class="btn btn-sm btn-outline-danger" type="submit" title="Remove from day"><i class="bi bi-x-lg"></i></button>
-      </form>
     </div>
   </div>
   <div class="card-body">
-    {% if module['notes'] %}<p class="small text-muted mb-2">{{ module['notes'] }}</p>{% endif %}
-
-    {% if not mb['circuits'] and not mb['standalone'] %}
-    <p class="text-muted mb-0">No exercises yet.</p>
-    {% endif %}
-
-    {% for cb in mb['circuits'] %}
-    {% set circuit = cb['circuit'] %}
-    <div class="circuit-block rounded-3 p-3 mb-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="fw-semibold text-violet"><i class="bi bi-arrow-repeat me-2"></i>{{ circuit['label'] }}</span>
-        <span class="small text-muted">
-          {{ circuit['rounds'] }} round{{ 's' if circuit['rounds'] != 1 }}
-          &middot; rest {{ circuit['rest_sec'] }}s after each round &middot; no rest between exercises
-        </span>
-      </div>
-      <table class="table table-sm align-middle mb-0">
-        <tbody>
-          {% for e in cb['members'] %}
-          {% set counter.n = counter.n + 1 %}
-          <tr>
-            <td style="width: 2.5rem;"><span class="exercise-no">{{ counter.n }}</span></td>
-            <td>{{ e['name'] }}</td>
-            <td class="text-end text-muted">
-              {% if e['reps'] %}{% if e['reps'] == 'max' %}max reps{% else %}{{ e['reps'] }} reps{% endif %}{% endif %}
-              {% if e['weight_kg'] is not none %}&middot; {% if e['weight_kg'] == 'max' %}max{% else %}{{ e['weight_kg'] }} kg{% endif %}{% endif %}
-              {% if e['duration_sec'] %}&middot; {% if e['duration_sec'] == 'max' %}max{% else %}{{ e['duration_sec'] }}s{% endif %}{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endfor %}
-
-    {% if mb['standalone'] %}
-    <table class="table align-middle mb-0">
+    {% if not sets %}
+    <p class="text-muted mb-0">No prescription yet. Edit in builder.</p>
+    {% else %}
+    <table class="table table-sm align-middle mb-0">
       <thead class="table-light">
         <tr>
-          <th style="width: 2.5rem;">#</th>
+          <th>#</th>
           <th>Exercise</th>
-          <th>Details</th>
+          <th>Sets&times;Reps</th>
+          <th>Weight</th>
+          <th>Duration</th>
           <th>Rest</th>
         </tr>
       </thead>
       <tbody>
-        {% for e in mb['standalone'] %}
-        {% set counter.n = counter.n + 1 %}
+        {% for s in sets %}
         <tr>
-          <td><span class="exercise-no">{{ counter.n }}</span></td>
-          <td>
-            {% if e['kind'] == 'cardio' %}
-            <i class="bi bi-activity text-rose me-1"></i>{{ e['name'] }}
-            {% else %}
-            <i class="bi bi-barbell text-blue me-1"></i>{{ e['name'] }}
-            {% endif %}
-          </td>
-          <td class="text-muted">
-            {% if e['kind'] == 'cardio' %}
-              {% if e['duration_min'] == 'max' %}max{% else %}{{ e['duration_min'] }} min{% endif %}{% if e['distance_km'] %} &middot; {{ e['distance_km'] }} km{% endif %}
-            {% else %}
-              {% if e['sets'] %}{{ e['sets'] }} sets{% endif %}
-              {% if e['reps'] %} &times; {% if e['reps'] == 'max' %}max reps{% else %}{{ e['reps'] }} reps{% endif %}{% endif %}
-              {% if e['weight_kg'] is not none %} &middot; {% if e['weight_kg'] == 'max' %}max{% else %}{{ e['weight_kg'] }} kg{% endif %}{% endif %}
-              {% if e['duration_sec'] %} &middot; {% if e['duration_sec'] == 'max' %}max{% else %}{{ e['duration_sec'] }}s{% endif %}{% endif %}
-            {% endif %}
-          </td>
-          <td>{{ e['rest_sec'] ~ 's' if e['rest_sec'] is not none else '—' }}</td>
+          <td style="width:2.5rem">{{ loop.index }}</td>
+          <td>{{ s['exercise_name'] }}</td>
+          <td>{% if s['sets'] or s['reps'] %}{{ s['sets'] or '-' }} &times; {% if s['reps'] == 'max' or (s['reps'] is not none and s['reps'] == 'max') %}max{% else %}{{ s['reps'] if s['reps'] is not none else '-' }}{% endif %}{% else %}—{% endif %}</td>
+          <td>{% if s['weight_kg'] is not none %}{% if s['weight_kg'] == 'max' %}max{% else %}{{ s['weight_kg'] }} kg{% endif %}{% else %}—{% endif %}</td>
+          <td>{% if s['duration_sec'] or s['duration_min'] %}{% if s['duration_sec'] %}{{ s['duration_sec'] }}s{% endif %}{% if s['duration_sec'] and s['duration_min'] %} + {% endif %}{% if s['duration_min'] %}{{ s['duration_min'] }} min{% endif %}{% else %}—{% endif %}</td>
+          <td>{{ s['rest_sec'] ~ 's' if s['rest_sec'] is not none else '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -128,19 +80,13 @@
 <div class="card shadow-sm border-0">
   <div class="card-body text-center py-5">
     <i class="bi bi-calendar-day display-4 icon-grad"></i>
-    <p class="mt-3 mb-2">No modules in this day yet. Add one from the sport library.</p>
+    <p class="mt-3 mb-2">No items in this day yet.</p>
     <div class="d-flex flex-wrap gap-2 justify-content-center">
-      <a class="btn btn-success" href="{{ url_for('sports.module_add_existing', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id']) }}">
-        <i class="bi bi-plus-square me-1"></i>Add module from library
+      <a class="btn btn-success" href="{{ url_for('sports.day_build', sport_id=sport['id'], workout_id=workout['id'], day_id=day['id']) }}">
+        <i class="bi bi-plus-square me-1"></i>Add to day
       </a>
     </div>
   </div>
 </div>
 {% endfor %}
-
-<div class="mt-3">
-  <a class="btn btn-outline-secondary" href="{{ url_for('sports.workout_detail', sport_id=sport['id'], workout_id=workout['id']) }}">
-    <i class="bi bi-arrow-left me-1"></i>{{ workout['name'] }}
-  </a>
-</div>
 {% endblock %}

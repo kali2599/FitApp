@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit exercise' if editing else 'New exercise' }}{% endblock %}
+{% block back %}
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('library.index', tab='exercises') }}">
+  <i class="bi bi-arrow-left me-1"></i>Library
+</a>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-barbell me-2 text-blue"></i>{{ 'Edit exercise' if editing else 'New exercise' }}
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="name">Name *</label>
+            <input class="form-control" id="name" name="name" type="text"
+                   value="{{ exercise['name'] or '' }}" placeholder="e.g. Bench press" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="label">Label</label>
+            <select class="form-select" id="label" name="label">
+              <option value="" {% if not exercise['label'] %}selected{% endif %}>No label</option>
+              {% for l in labels %}
+              <option value="{{ l }}" {% if exercise['label'] == l %}selected{% endif %}>{{ l|capitalize }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Used to suggest exercises when you set strength or skill goals.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Muscles involved</label>
+            <div class="row row-cols-2 row-cols-md-3 g-1">
+              {% for m in muscles %}
+              <div class="col">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="muscles" value="{{ m }}"
+                         id="muscle{{ loop.index }}" {% if m in exercise['muscles'] %}checked{% endif %}>
+                  <label class="form-check-label" for="muscle{{ loop.index }}">{{ m }}</label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="notes">Notes</label>
+            <textarea class="form-control" id="notes" name="notes" rows="2"
+                      placeholder="Technique cues, setup...">{{ exercise['notes'] or '' }}</textarea>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-success" type="submit">
+              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Add exercise' }}
+            </button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('library.index', tab='exercises') }}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

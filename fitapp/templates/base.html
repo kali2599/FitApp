@@ -28,6 +28,8 @@
            href="{{ url_for('dashboard.index') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('sports.') %}active{% endif %}"
            href="{{ url_for('sports.index') }}"><i class="bi bi-emoji-heart-eyes me-1"></i>Sports</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('library.') %}active{% endif %}"
+           href="{{ url_for('library.index') }}"><i class="bi bi-list-check me-1"></i>Library</a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('diets.') %}active{% endif %}"
            href="{{ url_for('diets.index') }}"><i class="bi bi-cup-straw me-1"></i>Diet</a></li>
         <li class="nav-item"><a class="nav-link {% if request.endpoint and request.endpoint.startswith('goals.') %}active{% endif %}"
@@ -70,6 +72,7 @@
       {% endfor %}
     {% endif %}
   {% endwith %}
+  {% block back %}{% endblock %}
   {% block content %}{% endblock %}
 </main>
 

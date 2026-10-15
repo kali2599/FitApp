@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Edit day' if editing else 'New day' }}{% endblock %}
+{% block back %}
+{% if back_url %}
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ back_url }}">
+  <i class="bi bi-arrow-left me-1"></i>Back
+</a>
+{% endif %}
+{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-6">
@@ -8,9 +15,6 @@
         <span class="fw-semibold">
           <i class="bi bi-calendar-week me-2"></i>{{ 'Edit workout-day' if editing else 'Add workout-day' }}
         </span>
-        {% if back_url %}
-        <a class="small" href="{{ back_url }}">Back</a>
-        {% endif %}
       </div>
       <div class="card-body">
         <form method="post" novalidate>

@@ -10,6 +10,7 @@ from .routes.admin import bp as admin_bp
 from .routes.dashboard import bp as dashboard_bp
 from .routes.diets import bp as diets_bp
 from .routes.goals import bp as goals_bp
+from .routes.library import bp as library_bp
 from .routes.profile import bp as profile_bp
 from .routes.stats import bp as stats_bp
 from .routes.sports import bp as sports_bp
@@ -33,6 +34,7 @@ def create_app(config_overrides=None):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(sports_bp)
+    app.register_blueprint(library_bp)
     app.register_blueprint(diets_bp)
     app.register_blueprint(goals_bp)
     app.register_blueprint(stats_bp)

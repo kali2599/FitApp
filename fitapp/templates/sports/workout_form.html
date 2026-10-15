@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Edit workout' if editing else 'New workout' }} · {{ sport['name'] }}{% endblock %}
+{% block back %}
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">
+  <i class="bi bi-arrow-left me-1"></i>{{ sport['name'] }}
+</a>
+{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-7">
@@ -8,12 +13,7 @@
         <span class="fw-semibold">
           <i class="bi bi-layers me-2"></i>
           {{ 'Edit workout' if editing else 'New workout' }}
-          <span class="badge
-            {% if sport['sport_type'] == 'gym' %}text-bg-primary
-            {% elif sport['sport_type'] == 'cardio' %}text-bg-danger
-            {% else %}text-bg-dark{% endif %} ms-1">{{ sport['sport_type'] }}</span>
         </span>
-        <a class="small" href="{{ url_for('sports.detail', sport_id=sport['id']) }}">Back to {{ sport['name'] }}</a>
       </div>
       <div class="card-body">
         <form method="post" novalidate>

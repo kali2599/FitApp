@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Edit sport' if editing else 'New sport' }}{% endblock %}
+{% block back %}
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('sports.index') }}">
+  <i class="bi bi-arrow-left me-1"></i>All sports
+</a>
+{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-7">
@@ -8,7 +13,6 @@
         <span class="fw-semibold">
           <i class="bi bi-lightning-charge-fill me-2"></i>{{ 'Edit sport' if editing else 'New sport' }}
         </span>
-        <a class="small" href="{{ url_for('sports.index') }}">Back to sports</a>
       </div>
       <div class="card-body">
         <form method="post" novalidate>
@@ -16,22 +20,6 @@
             <label class="form-label" for="name">Sport name *</label>
             <input class="form-control" id="name" name="name" type="text"
                    value="{{ sport['name'] or '' }}" placeholder="e.g. Calisthenics" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="sport_type">Sport type *</label>
-            <select class="form-select" id="sport_type" name="sport_type" required>
-              <option value="">Choose...</option>
-              {% for t in types %}
-              <option value="{{ t }}" {% if sport['sport_type'] == t %}selected{% endif %}>
-                {{ t.capitalize() }}
-              </option>
-              {% endfor %}
-            </select>
-            <div class="form-text">
-              <strong>Gym</strong>: sets, reps, weight/duration, rest and mini-circuits.
-              <strong>Cardio</strong>: run, swimming or spinning by duration.
-              <strong>Hybrid</strong>: mix gym and cardio within a module.
-            </div>
           </div>
           <div class="mb-3">
             <label class="form-label" for="notes">Notes</label>

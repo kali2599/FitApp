@@ -16,7 +16,6 @@
 
 {% if g.user['role'] == 'admin' %}
 <nav class="nav nav-pills admin-tabs mb-4">
-  <a class="nav-link" href="{{ url_for('admin.exercises') }}"><i class="bi bi-database me-1"></i>Exercises</a>
   <a class="nav-link" href="{{ url_for('admin.index') }}"><i class="bi bi-people me-1"></i>Users</a>
 </nav>
 {% endif %}

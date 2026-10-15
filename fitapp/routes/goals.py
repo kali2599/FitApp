@@ -50,25 +50,27 @@ CATEGORY_SUGGESTIONS = {
 }
 
 
-def _catalog_exercises(db):
+def _library_exercises(db):
     return db.execute(
-        "SELECT name, category, subcategory FROM exercises ORDER BY name COLLATE NOCASE"
+        "SELECT name, label FROM library_exercises WHERE user_id = ? "
+        "ORDER BY name COLLATE NOCASE",
+        (g.user["id"],),
     ).fetchall()
 
 
 def _menu_catalog(db):
     menu = {"strength": [], "skill": []}
-    for row in _catalog_exercises(db):
-        if row["category"] == "gym" and row["subcategory"] in menu:
-            menu[row["subcategory"]].append(row["name"])
+    for row in _library_exercises(db):
+        if row["label"] in menu:
+            menu[row["label"]].append(row["name"])
     return menu
 
 
 def _goal_suggestions(db):
     suggestions = {key: list(values) for key, values in CATEGORY_SUGGESTIONS.items()}
-    for row in _catalog_exercises(db):
-        if row["category"] == "gym" and row["subcategory"] in suggestions:
-            suggestions[row["subcategory"]].append(row["name"])
+    for row in _library_exercises(db):
+        if row["label"] in suggestions:
+            suggestions[row["label"]].append(row["name"])
     return suggestions
 
 

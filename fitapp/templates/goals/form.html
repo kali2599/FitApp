@@ -1,12 +1,16 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Edit goal' if editing else 'New goal' }}{% endblock %}
+{% block back %}
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('goals.index') }}">
+  <i class="bi bi-arrow-left me-1"></i>Goals
+</a>
+{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-8">
     <div class="card shadow-sm border-0">
       <div class="card-header bg-white d-flex justify-content-between align-items-center">
         <span class="fw-semibold"><i class="bi bi-bullseye me-2"></i>{{ 'Edit goal' if editing else 'New goal' }}</span>
-        <a class="small" href="{{ url_for('goals.index') }}">Back to goals</a>
       </div>
       <div class="card-body">
         <form method="post" novalidate>

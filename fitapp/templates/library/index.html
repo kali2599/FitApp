@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Library{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <h1 class="h3 mb-1">Library</h1>
+    <p class="text-muted mb-0">Exercises, mini-circuits and modules you reuse across your sports.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if tab == 'modules' %}
+    <a class="btn btn-success" href="{{ url_for('library.module_new') }}">
+      <i class="bi bi-plus-lg me-1"></i>New module
+    </a>
+    {% else %}
+    <a class="btn btn-outline-success" href="{{ url_for('library.circuit_new') }}">
+      <i class="bi bi-arrow-repeat me-1"></i>New mini-circuit
+    </a>
+    <a class="btn btn-success" href="{{ url_for('library.exercise_new') }}">
+      <i class="bi bi-plus-lg me-1"></i>New exercise
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'modules' %}active{% endif %}" href="{{ url_for('library.index', tab='modules') }}">
+      <i class="bi bi-calendar-day me-1"></i>Modules
+      <span class="badge text-bg-light border ms-1">{{ modules|length }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'exercises' %}active{% endif %}" href="{{ url_for('library.index', tab='exercises') }}">
+      <i class="bi bi-barbell me-1"></i>Exercises
+      <span class="badge text-bg-light border ms-1">{{ exercises|length + circuits|length }}</span>
+    </a>
+  </li>
+</ul>
+
+{% if tab == 'modules' %}
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    {% if modules %}
+    <div class="list-group list-group-flush">
+      {% for module in modules %}
+      <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0">
+        <div>
+          <span class="fw-semibold"><i class="bi bi-calendar-day me-2 text-blue"></i>{{ module['name'] }}</span>
+
+          <span class="small text-muted d-block">
+            {{ module['item_count'] }} item{{ 's' if module['item_count'] != 1 }}
+            &middot; used in {{ module['day_count'] }} day{{ 's' if module['day_count'] != 1 }}
+          </span>
+        </div>
+        <div class="btn-group">
+          <a class="btn btn-sm btn-outline-success" href="{{ url_for('library.module_edit', module_id=module['id']) }}">
+            <i class="bi bi-pencil me-1"></i>Edit
+          </a>
+          <form class="d-inline" action="{{ url_for('library.module_delete', module_id=module['id']) }}"
+                method="post" onsubmit="return confirm('Delete this module? It will be removed from every day that uses it.');">
+            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="bi bi-calendar-day display-4 icon-grad"></i>
+      <p class="mt-3 mb-2">No modules yet. Group library exercises and mini-circuits into a reusable module.</p>
+      <a class="btn btn-success" href="{{ url_for('library.module_new') }}">Create your first module</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-barbell me-2 text-blue"></i>Exercises</div>
+  <div class="card-body">
+    {% if exercises %}
+    <div class="list-group list-group-flush">
+      {% for e in exercises %}
+      <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0">
+        <div>
+          <span class="fw-semibold">{{ e['name'] }}</span>
+          {% if e['label'] %}<span class="badge text-bg-light border ms-1 text-capitalize">{{ e['label'] }}</span>{% endif %}
+          <span class="small text-muted d-block">
+            {{ (e['muscles'] or '—').replace(',', ', ') }}
+            &middot; in {{ e['module_count'] }} module{{ 's' if e['module_count'] != 1 }}
+            {% if e['circuit_count'] %}&middot; {{ e['circuit_count'] }} circuit{{ 's' if e['circuit_count'] != 1 }}{% endif %}
+          </span>
+        </div>
+        <div class="btn-group">
+          <a class="btn btn-sm btn-outline-success" href="{{ url_for('library.exercise_edit', exercise_id=e['id']) }}">
+            <i class="bi bi-pencil me-1"></i>Edit
+          </a>
+          <form class="d-inline" action="{{ url_for('library.exercise_delete', exercise_id=e['id']) }}"
+                method="post" onsubmit="return confirm('Delete this exercise? It will be removed from every module, circuit and day that uses it.');">
+            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No exercises yet. Add the movements you train and reuse them everywhere.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header fw-semibold"><i class="bi bi-arrow-repeat me-2 text-violet"></i>Mini-circuits</div>
+  <div class="card-body">
+    {% if circuits %}
+    <div class="list-group list-group-flush">
+      {% for c in circuits %}
+      <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0">
+        <div>
+          <span class="fw-semibold">{{ c['name'] }}</span>
+          <span class="small text-muted d-block">
+            {{ c['rounds'] }} round{{ 's' if c['rounds'] != 1 }}
+            &middot; rest {{ c['rest_sec'] }}s after each round
+            &middot; {{ c['member_count'] }} exercise{{ 's' if c['member_count'] != 1 }}
+          </span>
+        </div>
+        <div class="btn-group">
+          <a class="btn btn-sm btn-outline-success" href="{{ url_for('library.circuit_edit', circuit_id=c['id']) }}">
+            <i class="bi bi-pencil me-1"></i>Edit
+          </a>
+          <form class="d-inline" action="{{ url_for('library.circuit_delete', circuit_id=c['id']) }}"
+                method="post" onsubmit="return confirm('Delete this mini-circuit? It will be removed from every module and day that uses it.');">
+            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No mini-circuits yet. Group exercises to run back-to-back as one unit.</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

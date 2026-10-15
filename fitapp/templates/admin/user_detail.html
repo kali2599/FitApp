@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Admin · {{ user['username'] }}{% endblock %}
+{% block back %}
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('admin.index') }}">
+  <i class="bi bi-arrow-left me-1"></i>All users
+</a>
+{% endblock %}
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <div>
-    <a class="small" href="{{ url_for('admin.index') }}">&larr; All users</a>
     <h1 class="h3 mb-1 mt-1">
       {{ user['username'] }}
       {% if user['role'] == 'admin' %}
@@ -47,15 +51,13 @@
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>Sport</th><th>Type</th><th class="text-center">Workouts</th><th class="text-center">Days</th><th class="text-center">Modules</th><th class="text-center">Exercises</th></tr></thead>
+        <thead class="table-light"><tr><th>Sport</th><th class="text-center">Workouts</th><th class="text-center">Days</th><th class="text-center">Exercises</th></tr></thead>
         <tbody>
           {% for s in sports %}
           <tr>
             <td>{{ s['name'] }}</td>
-            <td><span class="badge text-bg-light border">{{ s['sport_type'] }}</span></td>
             <td class="text-center">{{ s['workout_count'] }}</td>
             <td class="text-center">{{ s['day_count'] }}</td>
-            <td class="text-center">{{ s['module_count'] }}</td>
             <td class="text-center">{{ s['exercise_count'] }}</td>
           </tr>
           {% endfor %}
