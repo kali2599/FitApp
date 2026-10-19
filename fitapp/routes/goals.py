@@ -17,16 +17,15 @@ from ..utils import to_date, to_float
 
 bp = Blueprint("goals", __name__, url_prefix="/goals")
 
-GOAL_TYPES = ["body", "skill", "strength", "cardio"]
+GOAL_TYPES = ["body", "skill", "strength"]
 STATUSES = ["active", "achieved", "abandoned"]
 
 UNIT_BY_TYPE = {
     "body": ["kg", "%"],
     "skill": ["seconds", "reps"],
     "strength": ["kg", "reps"],
-    "cardio": ["meters", "kilometers", "km/min", "%"],
 }
-NUMERIC_UNITS = {"kg", "%", "seconds", "reps", "meters", "kilometers", "km/min", "minutes"}
+NUMERIC_UNITS = {"kg", "%", "seconds", "reps"}
 
 CATEGORY_SUGGESTIONS = {
     "body": ["Weight", "Body fat"],
@@ -48,16 +47,6 @@ CATEGORY_SUGGESTIONS = {
         "Push-up",
         "Barbell row",
     ],
-    "cardio": [
-        "Running",
-        "Walking",
-        "Cycling",
-        "Rowing",
-        "Swimming",
-        "Jump rope",
-        "Elliptical",
-        "Stair climber",
-    ],
 }
 
 
@@ -73,7 +62,6 @@ def _menu_catalog(db):
     menu = {
         "strength": [],
         "skill": [],
-        "cardio": list(CATEGORY_SUGGESTIONS["cardio"]),
     }
     for row in _library_exercises(db):
         label = row["label"]

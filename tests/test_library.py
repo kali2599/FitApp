@@ -171,29 +171,44 @@ def test_cardio_label_and_goal(client, db):
     row = db.execute("SELECT * FROM library_exercises WHERE name = 'Rowing'").fetchone()
     assert row["label"] == "cardio"
 
-    # the cardio label and the labelled exercise appear on the goal form
-    body = client.get("/goals/new").get_data(as_text=True)
+    # the cardio goal form lists the labelled library exercise
+    body = client.get("/cardio-goals/new").get_data(as_text=True)
     assert "cardio" in body
     assert "Rowing" in body
 
-    # a cardio goal with a distance unit is accepted
+    # a cardio goal with the 5 attribute fields is accepted
     r = client.post(
-        "/goals/new",
-        data={"goal_type": "cardio", "category": "Running", "unit": "km/min",
-              "target_value": "5", "status": "active"},
+        "/cardio-goals/new",
+        data={"category": "Running", "distance_m": "5000", "time_s": "1500",
+              "pace_km_per_min": "3.3", "rounds": "4", "rest_s": "60",
+              "status": "active"},
     )
     assert r.status_code == 302
-    goal = db.execute("SELECT * FROM goals WHERE category = 'Running'").fetchone()
-    assert goal["goal_type"] == "cardio"
-    assert goal["unit"] == "km/min"
+    goal = db.execute("SELECT * FROM cardio_goals WHERE category = 'Running'").fetchone()
+    assert goal["distance_m"] == 5000.0
+    assert goal["time_s"] == 1500
+    assert goal["pace_km_per_min"] == 3.3
+    assert goal["rounds"] == 4
+    assert goal["rest_s"] == 60
 
-    # a unit that cardio does not allow is rejected
+    # distance is required
     r = client.post(
-        "/goals/new",
-        data={"goal_type": "cardio", "category": "Running", "unit": "kg",
-              "target_value": "5", "status": "active"},
+        "/cardio-goals/new",
+        data={"category": "Running", "status": "active"},
     )
     assert r.status_code == 400
+
+    # progress is tracked on distance (meters)
+    r = client.post(
+        "/cardio-goals/new",
+        data={"category": "Cycling", "distance_m": "20000", "status": "active"},
+    )
+    assert r.status_code == 302
+    goal = db.execute("SELECT * FROM cardio_goals WHERE category = 'Cycling'").fetchone()
+    client.post(f"/cardio-goals/{goal['id']}/log",
+                data={"value": "10000", "logged_date": "2026-01-01"})
+    log = db.execute("SELECT * FROM cardio_goal_logs WHERE cardio_goal_id = ?", (goal["id"],)).fetchone()
+    assert log["value"] == "10000.0"
 
     # the label field still rejects unknown values
     r = client.post("/library/exercises/new", data={"name": "Nope", "label": "bogus", "muscles": []})

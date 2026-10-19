@@ -12,11 +12,15 @@ you eat, chase your goals, and watch your body change.
   mini-circuits, plus **modules** (ordered combinations of the two). Build a day from
   the library: drop in a module, a mini-circuit or a single exercise, then set the
   prescriptions (sets, reps, weight, duration, distance, rest — `max` allowed) that
-  apply to that day only. Reuse a module across days and sports; edit it once and
-  every dependent day re-syncs.
+  apply to that day only. Cardio-labelled exercises use their own attribute set:
+  distance (m), time (s or min), pace (km/min), rounds and rest (s). Reuse a module
+  across days and sports; edit it once and every dependent day re-syncs.
 - **Track your diet** — log meals with calories and macros and see your daily totals.
-- **Set goals, watch progress** — body, skill, strength and cardio goals with automatic
-  progress tracking and a simple way to log each step.
+- **Set goals, watch progress** — body, skill and strength goals with automatic
+  progress tracking and a simple way to log each step. Cardio goals live in their
+  own space with five attributes — distance (m), time (s or min), pace (km/min),
+  rounds and rest (s) — each carrying its own unit, with progress tracked on
+  distance.
 - **Understand your body** — record weight, body fat and measurements over time and
   get a personal report: BMI, BMR, TDEE, calorie & macro targets, and tailored diet,
   training and recovery tips.
@@ -92,7 +96,7 @@ fitapp/
   progress.py           current value of a goal
   insights.py           BMI / BMR / TDEE / calorie & macro targets + suggestions
   utils.py              form parsing helpers, goal progress math
-  routes/               blueprints: dashboard, profile, sports, library, diets, goals, stats, admin
+  routes/               blueprints: dashboard, profile, sports, library, diets, goals, cardio_goals, stats, admin
   templates/            Jinja2 templates (Bootstrap 5)
   static/               custom CSS
   instance/fitapp.db    database file (created automatically)

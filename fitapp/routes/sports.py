@@ -475,7 +475,7 @@ def _parse_metric(raw, conv, label, errors, **kwargs):
 
 def _entry_sets(db, entry_id):
     return db.execute(
-        """SELECT s.*, e.name AS exercise_name
+        """SELECT s.*, e.name AS exercise_name, e.label AS exercise_label
            FROM day_entry_sets s
            JOIN library_exercises e ON e.id = s.exercise_id
            WHERE s.day_entry_id = ?
@@ -598,7 +598,8 @@ def day_build(sport_id, workout_id, day_id):
                 continue
             db.execute(
                 "UPDATE day_entry_sets SET sets = ?, reps = ?, weight_kg = ?, duration_sec = ?, "
-                "duration_min = ?, distance_km = ?, rest_sec = ?, notes = ? WHERE id = ?",
+                "duration_min = ?, distance_km = ?, rest_sec = ?, "
+                "distance_m = ?, pace_km_per_min = ?, rounds = ?, notes = ? WHERE id = ?",
                 (
                     _parse_metric(request.form.get(f"sets_{set_id}"), to_int, "Sets", errors, minimum=0, maximum=100),
                     _parse_metric(request.form.get(f"reps_{set_id}"), to_int, "Reps", errors, minimum=0, maximum=10000),
@@ -607,6 +608,9 @@ def day_build(sport_id, workout_id, day_id):
                     _parse_metric(request.form.get(f"duration_min_{set_id}"), to_float, "Duration", errors, minimum=0, maximum=1440),
                     _parse_metric(request.form.get(f"distance_{set_id}"), to_float, "Distance", errors, minimum=0, maximum=1000),
                     _parse_metric(request.form.get(f"rest_{set_id}"), to_int, "Rest", errors, minimum=0, maximum=3600),
+                    _parse_metric(request.form.get(f"distance_m_{set_id}"), to_float, "Distance", errors, minimum=0, maximum=100000),
+                    _parse_metric(request.form.get(f"pace_{set_id}"), to_float, "Pace", errors, minimum=0, maximum=100),
+                    _parse_metric(request.form.get(f"rounds_{set_id}"), to_int, "Rounds", errors, minimum=0, maximum=1000),
                     request.form.get(f"notes_{set_id}", "").strip(),
                     set_id,
                 ),

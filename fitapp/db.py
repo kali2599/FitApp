@@ -80,16 +80,42 @@ CREATE TABLE IF NOT EXISTS body_stats (
 CREATE TABLE IF NOT EXISTS goals (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength', 'cardio')),
+    goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength')),
     category     TEXT NOT NULL,
     target_value TEXT NOT NULL,
-    unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels', 'meters', 'kilometers', 'km/min', 'minutes')),
+    unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels')),
     start_value  TEXT,
     target_date  TEXT,
     status       TEXT NOT NULL DEFAULT 'active'
                  CHECK (status IN ('active', 'achieved', 'abandoned')),
     notes        TEXT,
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS cardio_goals (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    category        TEXT NOT NULL,
+    distance_m      REAL,
+    time_s          INTEGER,
+    pace_km_per_min REAL,
+    rounds          INTEGER,
+    rest_s          INTEGER,
+    target_date     TEXT,
+    status          TEXT NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active', 'achieved', 'abandoned')),
+    notes           TEXT,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS cardio_goal_logs (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id       INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    cardio_goal_id INTEGER NOT NULL REFERENCES cardio_goals (id) ON DELETE CASCADE,
+    value         TEXT NOT NULL,
+    logged_date   TEXT NOT NULL,
+    notes         TEXT,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS user_lifestyle (
@@ -165,19 +191,22 @@ CREATE TABLE IF NOT EXISTS day_entries (
 );
 
 CREATE TABLE IF NOT EXISTS day_entry_sets (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    day_entry_id INTEGER NOT NULL REFERENCES day_entries (id) ON DELETE CASCADE,
-    position     INTEGER NOT NULL DEFAULT 0,
-    exercise_id  INTEGER NOT NULL REFERENCES library_exercises (id) ON DELETE CASCADE,
-    circuit_id   INTEGER REFERENCES library_circuits (id) ON DELETE SET NULL,
-    sets         INTEGER,
-    reps         INTEGER,
-    weight_kg    REAL,
-    duration_sec INTEGER,
-    duration_min REAL,
-    distance_km  REAL,
-    rest_sec     INTEGER,
-    notes        TEXT
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    day_entry_id   INTEGER NOT NULL REFERENCES day_entries (id) ON DELETE CASCADE,
+    position       INTEGER NOT NULL DEFAULT 0,
+    exercise_id    INTEGER NOT NULL REFERENCES library_exercises (id) ON DELETE CASCADE,
+    circuit_id     INTEGER REFERENCES library_circuits (id) ON DELETE SET NULL,
+    sets           INTEGER,
+    reps           INTEGER,
+    weight_kg      REAL,
+    duration_sec   INTEGER,
+    duration_min   REAL,
+    distance_km    REAL,
+    rest_sec       INTEGER,
+    distance_m     REAL,
+    pace_km_per_min REAL,
+    rounds         INTEGER,
+    notes          TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_sports_user ON sports (user_id, created_at);
@@ -188,6 +217,8 @@ CREATE INDEX IF NOT EXISTS idx_diets_user ON diets (user_id, diet_date);
 CREATE INDEX IF NOT EXISTS idx_stats_user ON body_stats (user_id, stat_date);
 CREATE INDEX IF NOT EXISTS idx_goals_user ON goals (user_id, status);
 CREATE INDEX IF NOT EXISTS idx_goal_logs_goal ON goal_logs (goal_id, logged_date);
+CREATE INDEX IF NOT EXISTS idx_cardio_goals_user ON cardio_goals (user_id, status);
+CREATE INDEX IF NOT EXISTS idx_cardio_goal_logs_goal ON cardio_goal_logs (cardio_goal_id, logged_date);
 
 CREATE INDEX IF NOT EXISTS idx_library_exercises_user ON library_exercises (user_id, position);
 CREATE INDEX IF NOT EXISTS idx_library_circuits_user ON library_circuits (user_id, position);
@@ -246,19 +277,22 @@ CREATE TABLE IF NOT EXISTS day_entries (
 );
 
 CREATE TABLE IF NOT EXISTS day_entry_sets (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    day_entry_id INTEGER NOT NULL REFERENCES day_entries (id) ON DELETE CASCADE,
-    position     INTEGER NOT NULL DEFAULT 0,
-    exercise_id  INTEGER NOT NULL REFERENCES library_exercises (id) ON DELETE CASCADE,
-    circuit_id   INTEGER REFERENCES library_circuits (id) ON DELETE SET NULL,
-    sets         INTEGER,
-    reps         INTEGER,
-    weight_kg    REAL,
-    duration_sec INTEGER,
-    duration_min REAL,
-    distance_km  REAL,
-    rest_sec     INTEGER,
-    notes        TEXT
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    day_entry_id   INTEGER NOT NULL REFERENCES day_entries (id) ON DELETE CASCADE,
+    position       INTEGER NOT NULL DEFAULT 0,
+    exercise_id    INTEGER NOT NULL REFERENCES library_exercises (id) ON DELETE CASCADE,
+    circuit_id     INTEGER REFERENCES library_circuits (id) ON DELETE SET NULL,
+    sets           INTEGER,
+    reps           INTEGER,
+    weight_kg      REAL,
+    duration_sec   INTEGER,
+    duration_min   REAL,
+    distance_km    REAL,
+    rest_sec       INTEGER,
+    distance_m     REAL,
+    pace_km_per_min REAL,
+    rounds         INTEGER,
+    notes          TEXT
 );
 """
 
@@ -597,43 +631,95 @@ def _migrate_exercise_labels(db):
         db.execute("PRAGMA foreign_keys = ON")
 
 
-def _migrate_goal_cardio(db):
-    """Widen the goals CHECKs to allow cardio goals and distance/time units."""
+def _migrate_cardio_goals(db):
+    """Move single-value cardio goals to the cardio_goals table.
+
+    Rebuilds goals to drop the 'cardio' goal_type and its distance/time units,
+    creates the cardio_goals + cardio_goal_logs tables, migrates any existing
+    cardio rows, and extends day_entry_sets with the cardio attribute columns.
+    """
     row = db.execute(
         "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'goals'"
     ).fetchone()
     if row is None:
         return
-    sql = row["sql"] or ""
-    if "'cardio'" in sql and "'km/min'" in sql:
-        return
+    goals_sql = row["sql"] or ""
+    needs_goals_rebuild = "'cardio'" in goals_sql
 
-    db.execute("PRAGMA foreign_keys = OFF")
-    try:
+    cardio_row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'cardio_goals'"
+    ).fetchone()
+    if cardio_row is None:
         db.executescript("""
-            CREATE TABLE goals_new (
-                id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-                goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength', 'cardio')),
-                category     TEXT NOT NULL,
-                target_value TEXT NOT NULL,
-                unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels', 'meters', 'kilometers', 'km/min', 'minutes')),
-                start_value  TEXT,
-                target_date  TEXT,
-                status       TEXT NOT NULL DEFAULT 'active'
-                             CHECK (status IN ('active', 'achieved', 'abandoned')),
-                notes        TEXT,
-                created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+            CREATE TABLE cardio_goals (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id         INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                category        TEXT NOT NULL,
+                distance_m      REAL,
+                time_s          INTEGER,
+                pace_km_per_min REAL,
+                rounds          INTEGER,
+                rest_s          INTEGER,
+                target_date     TEXT,
+                status          TEXT NOT NULL DEFAULT 'active'
+                                CHECK (status IN ('active', 'achieved', 'abandoned')),
+                notes           TEXT,
+                created_at      TEXT NOT NULL DEFAULT (datetime('now'))
             );
-            INSERT INTO goals_new (id, user_id, goal_type, category, target_value, unit,
-                                   start_value, target_date, status, notes, created_at)
-                SELECT id, user_id, goal_type, category, target_value, unit,
-                       start_value, target_date, status, notes, created_at FROM goals;
-            DROP TABLE goals;
-            ALTER TABLE goals_new RENAME TO goals;
+            CREATE TABLE cardio_goal_logs (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id        INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                cardio_goal_id INTEGER NOT NULL REFERENCES cardio_goals (id) ON DELETE CASCADE,
+                value          TEXT NOT NULL,
+                logged_date    TEXT NOT NULL,
+                notes          TEXT,
+                created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+            );
         """)
-    finally:
-        db.execute("PRAGMA foreign_keys = ON")
+
+    if needs_goals_rebuild:
+        db.execute("PRAGMA foreign_keys = OFF")
+        try:
+            db.executescript("""
+                INSERT INTO cardio_goals (user_id, category, target_date, status, notes, created_at)
+                    SELECT user_id, category, target_date, status, notes, created_at
+                    FROM goals WHERE goal_type = 'cardio';
+                CREATE TABLE goals_new (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                    goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength')),
+                    category     TEXT NOT NULL,
+                    target_value TEXT NOT NULL,
+                    unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels')),
+                    start_value  TEXT,
+                    target_date  TEXT,
+                    status       TEXT NOT NULL DEFAULT 'active'
+                                 CHECK (status IN ('active', 'achieved', 'abandoned')),
+                    notes        TEXT,
+                    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                INSERT INTO goals_new (id, user_id, goal_type, category, target_value, unit,
+                                       start_value, target_date, status, notes, created_at)
+                    SELECT id, user_id, goal_type, category, target_value, unit,
+                           start_value, target_date, status, notes, created_at
+                    FROM goals WHERE goal_type != 'cardio';
+                DROP TABLE goals;
+                ALTER TABLE goals_new RENAME TO goals;
+            """)
+        finally:
+            db.execute("PRAGMA foreign_keys = ON")
+
+    # Extend day_entry_sets with the cardio attribute columns.
+    if _table_exists(db, "day_entry_sets"):
+        cols = db.execute("PRAGMA table_info(day_entry_sets)").fetchall()
+        existing = {col["name"] for col in cols}
+        for name, decl in (
+            ("distance_m", "REAL"),
+            ("pace_km_per_min", "REAL"),
+            ("rounds", "INTEGER"),
+        ):
+            if name not in existing:
+                db.execute(f"ALTER TABLE day_entry_sets ADD COLUMN {name} {decl}")
 
 
 def _migrate_roles(db):
@@ -655,7 +741,7 @@ def init_db():
     _migrate_unified_library(db)
     _migrate_drop_legacy(db)
     _migrate_exercise_labels(db)
-    _migrate_goal_cardio(db)
+    _migrate_cardio_goals(db)
     _migrate_roles(db)
     db.executescript(SCHEMA)
     db.commit()

@@ -1,6 +1,8 @@
 """Legacy schema -> unified library migration and fresh-schema shape."""
 import sqlite3
 
+import pytest
+
 from fitapp import create_app
 
 NEW_TABLES = ["library_exercises", "library_circuits", "library_circuit_members",
@@ -209,8 +211,8 @@ INSERT INTO goal_logs (id, user_id, goal_id, value, logged_date)
 """
 
 
-def test_old_checks_are_widened_for_cardio(tmp_path):
-    """Databases built with the old label/goal CHECKs are rebuilt for cardio."""
+def test_old_checks_gain_cardio_label_and_tables(tmp_path):
+    """Databases built with the old label CHECK gain the cardio label and tables."""
     path = str(tmp_path / "old_check.db")
     con = sqlite3.connect(path)
     con.executescript(OLD_CHECK_SQL)
@@ -224,16 +226,30 @@ def test_old_checks_are_widened_for_cardio(tmp_path):
     assert _count(path, "goals") == 1
     assert _count(path, "goal_logs") == 1
 
+    # the new cardio tables and day_entry_sets columns exist
+    assert "cardio_goals" in _tables(path)
+    assert "cardio_goal_logs" in _tables(path)
+    assert {"distance_m", "pace_km_per_min", "rounds"} <= _columns(path, "day_entry_sets")
+
     con = sqlite3.connect(path)
     con.execute(
         "INSERT INTO library_exercises (user_id, name, label) VALUES (1, 'Rowing', 'cardio')"
     )
     con.execute(
-        "INSERT INTO goals (user_id, goal_type, category, target_value, unit) "
-        "VALUES (1, 'cardio', 'Running', '5', 'km/min')"
+        "INSERT INTO cardio_goals (user_id, category, distance_m, time_s, pace_km_per_min, rounds, rest_s) "
+        "VALUES (1, 'Running', 5000, 1500, 3.3, 4, 60)"
     )
     con.commit()
     con.close()
 
     assert _count(path, "library_exercises") == 2
-    assert _count(path, "goals") == 2
+    assert _count(path, "cardio_goals") == 1
+
+    # goals no longer accepts the cardio goal_type
+    con = sqlite3.connect(path)
+    with pytest.raises(sqlite3.IntegrityError):
+        con.execute(
+            "INSERT INTO goals (user_id, goal_type, category, target_value, unit) "
+            "VALUES (1, 'cardio', 'Running', '5', 'kg')"
+        )
+    con.close()

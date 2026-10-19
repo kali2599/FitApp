@@ -10,6 +10,15 @@
 </div>
 
 <ul class="nav nav-pills mb-3">
+  <li class="nav-item">
+    <a class="nav-link active" href="{{ url_for('goals.index') }}">Goals</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('cardio_goals.index') }}">Cardio goals</a>
+  </li>
+</ul>
+
+<ul class="nav nav-pills mb-3">
   {% for status in statuses %}
   <li class="nav-item">
     <a class="nav-link {% if status == active_status %}active{% endif %}"
@@ -26,7 +35,7 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
-            <span class="badge {{ {'body': 'text-bg-info', 'skill': 'text-bg-primary', 'strength': 'text-bg-warning', 'cardio': 'text-bg-success'}[goal['goal_type']] }}">
+            <span class="badge {{ {'body': 'text-bg-info', 'skill': 'text-bg-primary', 'strength': 'text-bg-warning'}.get(goal['goal_type'], 'text-bg-secondary') }}">
               {{ goal['goal_type'] }}
             </span>
             <h2 class="h6 mt-2 mb-0">{{ goal['category'] }}</h2>

@@ -114,6 +114,35 @@ def test_prescriptions_saved(client, db):
     assert r.status_code == 400
 
 
+def test_cardio_prescriptions_saved(client, db):
+    """Cardio-labelled exercises on a day use the cardio attribute columns."""
+    make_user(client, "tester")
+    client.post("/library/exercises/new", data={"name": "Running", "label": "cardio", "muscles": []})
+    running = scalar(db, "SELECT id FROM library_exercises WHERE name = 'Running'")
+    sport, workout, day = _setup_day(client, db)
+    base = f"/sports/{sport}/workouts/{workout}/days/{day}/build"
+    client.post(base, data={"target": f"e:{running}"})
+    set_id = scalar(db, "SELECT s.id FROM day_entry_sets s JOIN day_entries de ON de.id = s.day_entry_id "
+                        "WHERE de.workout_day_id = ?", day)
+
+    # the build page renders the cardio column set
+    html = client.get(base).get_data(as_text=True)
+    assert "Distance (m)" in html and "Pace (km/min)" in html and "Rounds" in html
+
+    r = client.post(base, data={
+        "action": "save", "set_id": [str(set_id)],
+        f"distance_m_{set_id}": "5000", f"duration_sec_{set_id}": "1500",
+        f"duration_min_{set_id}": "", f"pace_{set_id}": "3.3",
+        f"rounds_{set_id}": "4", f"rest_{set_id}": "60",
+        f"notes_{set_id}": "",
+    })
+    assert r.status_code == 302
+    row = db.execute("SELECT distance_m, duration_sec, pace_km_per_min, rounds, rest_sec "
+                     "FROM day_entry_sets WHERE id = ?", (set_id,)).fetchone()
+    assert (row["distance_m"], row["duration_sec"], row["pace_km_per_min"],
+            row["rounds"], row["rest_sec"]) == (5000.0, 1500, 3.3, 4, 60)
+
+
 def test_remove_entry_cascades(client, db):
     make_user(client, "tester")
     lib = _setup_library(client, db)
