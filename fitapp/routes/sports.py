@@ -599,7 +599,7 @@ def day_build(sport_id, workout_id, day_id):
             db.execute(
                 "UPDATE day_entry_sets SET sets = ?, reps = ?, weight_kg = ?, duration_sec = ?, "
                 "duration_min = ?, distance_km = ?, rest_sec = ?, "
-                "distance_m = ?, pace_km_per_min = ?, rounds = ?, notes = ? WHERE id = ?",
+                "distance_m = ?, pace_km_per_min = ?, rounds = ? WHERE id = ?",
                 (
                     _parse_metric(request.form.get(f"sets_{set_id}"), to_int, "Sets", errors, minimum=0, maximum=100),
                     _parse_metric(request.form.get(f"reps_{set_id}"), to_int, "Reps", errors, minimum=0, maximum=10000),
@@ -611,10 +611,17 @@ def day_build(sport_id, workout_id, day_id):
                     _parse_metric(request.form.get(f"distance_m_{set_id}"), to_float, "Distance", errors, minimum=0, maximum=100000),
                     _parse_metric(request.form.get(f"pace_{set_id}"), to_float, "Pace", errors, minimum=0, maximum=100),
                     _parse_metric(request.form.get(f"rounds_{set_id}"), to_int, "Rounds", errors, minimum=0, maximum=1000),
-                    request.form.get(f"notes_{set_id}", "").strip(),
                     set_id,
                 ),
             )
+            # The note is only touched when the form actually carries the
+            # field: a missing key means "leave it alone", not "clear it".
+            notes_key = f"notes_{set_id}"
+            if notes_key in request.form:
+                db.execute(
+                    "UPDATE day_entry_sets SET notes = ? WHERE id = ?",
+                    (request.form.get(notes_key, "").strip(), set_id),
+                )
         if errors:
             db.rollback()
             for error in errors:

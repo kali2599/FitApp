@@ -69,7 +69,7 @@
           {% if goal['time_s'] is not none %}
           <li class="d-flex justify-content-between">
             <span class="text-muted">Time</span>
-            <span>{{ goal['time_s'] }}s{% if goal['time_min'] is not none %} ({{ goal['time_min'] }} min){% endif %}</span>
+            <span>{{ goal['time_s']|duration }}</span>
           </li>
           {% endif %}
           {% if goal['pace_km_per_min'] is not none %}

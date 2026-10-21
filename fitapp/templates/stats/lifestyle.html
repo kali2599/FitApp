@@ -22,12 +22,12 @@
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="sessions_per_week">Sessions per week</label>
               <input class="form-control" id="sessions_per_week" name="sessions_per_week" type="number"
-                     min="0" max="21" step="1" value="{{ values['sessions_per_week'] or '' }}" placeholder="e.g. 3">
+                     min="0" max="21" step="1" value="{{ values['sessions_per_week'] }}" placeholder="e.g. 3">
             </div>
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="session_duration_min">Session length (min)</label>
               <input class="form-control" id="session_duration_min" name="session_duration_min" type="number"
-                     min="5" max="600" step="1" value="{{ values['session_duration_min'] or '' }}" placeholder="e.g. 45">
+                     min="5" max="600" step="1" value="{{ values['session_duration_min'] }}" placeholder="e.g. 45">
             </div>
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="intensity">Training intensity</label>
@@ -55,12 +55,12 @@
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="sleep_hours">Sleep per night (h)</label>
               <input class="form-control" id="sleep_hours" name="sleep_hours" type="number"
-                     min="0.5" max="24" step="0.5" value="{{ values['sleep_hours'] or '' }}" placeholder="e.g. 7.5">
+                     min="0.5" max="24" step="0.5" value="{{ values['sleep_hours'] }}" placeholder="e.g. 7.5">
             </div>
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="daily_calories">Daily calories (kcal)</label>
               <input class="form-control" id="daily_calories" name="daily_calories" type="number"
-                     min="500" max="10000" step="1" value="{{ values['daily_calories'] or '' }}" placeholder="e.g. 2200">
+                     min="500" max="10000" step="1" value="{{ values['daily_calories'] }}" placeholder="e.g. 2200">
             </div>
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="goal_direction">Goal direction</label>
@@ -76,7 +76,7 @@
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="water_cups">Water (cups/day)</label>
               <input class="form-control" id="water_cups" name="water_cups" type="number"
-                     min="0" max="30" step="0.5" value="{{ values['water_cups'] or '' }}" placeholder="e.g. 8">
+                     min="0" max="30" step="0.5" value="{{ values['water_cups'] }}" placeholder="e.g. 8">
             </div>
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="stress_level">Stress level</label>

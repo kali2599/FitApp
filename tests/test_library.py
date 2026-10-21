@@ -1,4 +1,7 @@
 """Library CRUD, tabs and per-user isolation (Phase 2)."""
+import json
+import re
+
 from helpers import make_user, scalar
 
 
@@ -127,6 +130,70 @@ def test_module_crud_and_day_resync(client, db):
     after = scalar(db, "SELECT COUNT(*) FROM day_entry_sets WHERE day_entry_id = ? AND exercise_id = ?",
                    entry, e1)
     assert before == 1 and after == 2  # e1 was already a circuit member, now also standalone
+
+
+def test_module_items_keep_their_own_name_when_ids_collide(client, db):
+    """Exercise and circuit ids are separate sequences, so a shared id must
+    not make one item borrow the other's name."""
+    make_user(client, "tester")
+    client.post("/library/exercises/new", data={"name": "Press", "muscles": []})
+    client.post("/library/exercises/new", data={"name": "Curl", "muscles": []})
+    press = scalar(db, "SELECT id FROM library_exercises WHERE name = 'Press'")
+    curl = scalar(db, "SELECT id FROM library_exercises WHERE name = 'Curl'")
+    client.post(
+        "/library/circuits/new",
+        data={"name": "Burner", "rounds": "3", "rest_sec": "45", "member_id": [str(press), str(curl)]},
+    )
+    burner = scalar(db, "SELECT id FROM library_circuits WHERE name = 'Burner'")
+    assert press == burner  # the collision the fix is about
+
+    r = client.post(
+        "/library/modules/new",
+        data={"name": "Mixed", "item_type": ["exercise", "circuit"],
+              "item_id": [str(press), str(burner)]},
+    )
+    assert r.status_code == 302
+    module = scalar(db, "SELECT id FROM workout_modules WHERE name = 'Mixed'")
+
+    body = client.get(f"/library/modules/{module}/edit").get_data(as_text=True)
+    items = json.loads(re.search(r"let items = (\[.*?\]);", body, re.S).group(1))
+    assert [(i["type"], i["name"]) for i in items] == [
+        ("exercise", "Press"),
+        ("circuit", "Burner"),
+    ]
+
+
+def test_cardio_goal_time_is_rendered_readably(client, db):
+    """A cardio goal shows its time in minutes, and the edit form never
+    pre-fills the seconds and minutes fields at the same time."""
+    make_user(client, "tester")
+    r = client.post(
+        "/goals/new",
+        data={"goal_type": "cardio", "category": "Running", "distance_m": "5000",
+              "time_s": "1500", "status": "active"},
+    )
+    assert r.status_code == 302
+
+    body = client.get("/goals/").get_data(as_text=True)
+    assert "25 min (1500s)" in body
+    assert "( min)" not in body
+
+    goal = db.execute("SELECT id FROM cardio_goals WHERE category = 'Running'").fetchone()
+    body = client.get(f"/goals/cardio/{goal['id']}/edit").get_data(as_text=True)
+    seconds = re.search(r'id="time_s"[^>]*value="([^"]*)"', body).group(1)
+    minutes = re.search(r'id="time_min"[^>]*value="([^"]*)"', body).group(1)
+    assert seconds == "1500"
+    assert minutes == ""
+
+    # saving the form as rendered keeps the time and does not trip the
+    # "seconds OR minutes, not both" guard
+    r = client.post(
+        f"/goals/cardio/{goal['id']}/edit",
+        data={"goal_type": "cardio", "category": "Running", "distance_m": "5000",
+              "time_s": seconds, "time_min": minutes, "status": "active"},
+    )
+    assert r.status_code == 302
+    assert db.execute("SELECT time_s FROM cardio_goals WHERE id = ?", (goal["id"],)).fetchone()["time_s"] == 1500
 
 
 def test_isolation_between_users(client, db):

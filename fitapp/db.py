@@ -722,6 +722,30 @@ def _migrate_cardio_goals(db):
                 db.execute(f"ALTER TABLE day_entry_sets ADD COLUMN {name} {decl}")
 
 
+def _migrate_drop_orphans(db):
+    """Drop tables left behind by an older schema that the app no longer uses.
+
+    workout_sessions, session_entries and skill_levels belong to a previous
+    design. They are removed only while every one of them is empty, so a
+    table that ever holds data is never touched.
+    """
+    orphans = ("session_entries", "workout_sessions", "skill_levels")
+    present = [name for name in orphans if _table_exists(db, name)]
+    if not present:
+        return
+
+    for name in present:
+        count = db.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+        if count:
+            return
+
+    db.execute("PRAGMA foreign_keys = OFF")
+    try:
+        db.executescript("".join(f"DROP TABLE IF EXISTS {name};" for name in present))
+    finally:
+        db.execute("PRAGMA foreign_keys = ON")
+
+
 def _migrate_roles(db):
     if not db.execute(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'"
@@ -743,6 +767,7 @@ def init_db():
     _migrate_exercise_labels(db)
     _migrate_cardio_goals(db)
     _migrate_roles(db)
+    _migrate_drop_orphans(db)
     db.executescript(SCHEMA)
     db.commit()
 

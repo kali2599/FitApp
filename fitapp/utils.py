@@ -49,6 +49,28 @@ def to_date(value):
         raise ValueError("must be a valid date (YYYY-MM-DD)")
 
 
+def format_duration(seconds):
+    """Render a number of seconds as a compact duration label.
+
+    Under a minute the raw seconds are enough ("45s"); above that the label
+    carries both readings ("25 min (1500s)"). Blank input renders as "".
+    """
+    if seconds is None:
+        return ""
+    try:
+        total = int(round(float(seconds)))
+    except (TypeError, ValueError):
+        return ""
+    if total <= 0:
+        return "0s"
+    if total < 60:
+        return f"{total}s"
+    minutes = total / 60
+    if total % 60 == 0:
+        return f"{int(minutes)} min ({total}s)"
+    return f"{minutes:.1f} min ({total}s)"
+
+
 def goal_progress(goal, current_value):
     """Return completion percentage (0-150) for a goal given the current value.
 

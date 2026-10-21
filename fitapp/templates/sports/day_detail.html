@@ -49,6 +49,7 @@
     {% if not sets %}
     <p class="text-muted mb-0">No prescription yet. Edit in builder.</p>
     {% else %}
+    <div class="table-responsive">
     <table class="table table-sm align-middle mb-0">
       <thead class="table-light">
         <tr>
@@ -57,7 +58,9 @@
           <th>Sets&times;Reps</th>
           <th>Weight</th>
           <th>Duration</th>
+          <th>Distance</th>
           <th>Rest</th>
+          <th>Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -65,14 +68,17 @@
         <tr>
           <td style="width:2.5rem">{{ loop.index }}</td>
           <td>{{ s['exercise_name'] }}</td>
-          <td>{% if s['sets'] or s['reps'] %}{{ s['sets'] or '-' }} &times; {% if s['reps'] == 'max' or (s['reps'] is not none and s['reps'] == 'max') %}max{% else %}{{ s['reps'] if s['reps'] is not none else '-' }}{% endif %}{% else %}—{% endif %}</td>
+          <td>{% if s['sets'] or s['reps'] %}{{ s['sets'] or '-' }} &times; {% if s['reps'] == 'max' %}max{% else %}{{ s['reps'] if s['reps'] is not none else '-' }}{% endif %}{% else %}—{% endif %}</td>
           <td>{% if s['weight_kg'] is not none %}{% if s['weight_kg'] == 'max' %}max{% else %}{{ s['weight_kg'] }} kg{% endif %}{% else %}—{% endif %}</td>
           <td>{% if s['duration_sec'] or s['duration_min'] %}{% if s['duration_sec'] %}{{ s['duration_sec'] }}s{% endif %}{% if s['duration_sec'] and s['duration_min'] %} + {% endif %}{% if s['duration_min'] %}{{ s['duration_min'] }} min{% endif %}{% else %}—{% endif %}</td>
+          <td>{% if s['exercise_label'] == 'cardio' %}{{ s['distance_m'] ~ ' m' if s['distance_m'] is not none else '—' }}{% else %}{{ s['distance_km'] ~ ' km' if s['distance_km'] is not none else '—' }}{% endif %}</td>
           <td>{{ s['rest_sec'] ~ 's' if s['rest_sec'] is not none else '—' }}</td>
+          <td>{{ s['notes'] if s['notes'] else '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% endif %}
   </div>
 </div>

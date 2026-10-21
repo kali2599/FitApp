@@ -73,7 +73,7 @@
             <div class="col-md-2 mb-3">
               <label class="form-label" for="time_min">or (min)</label>
               <input class="form-control" id="time_min" name="time_min" type="number" step="0.01" min="0"
-                     value="{{ goal['time_min'] if goal['time_min'] is not none else '' }}">
+                     value="" placeholder="leave blank">
             </div>
             <div class="col-md-2 mb-3">
               <label class="form-label" for="pace_km_per_min">Pace (km/min)</label>
@@ -152,6 +152,17 @@
   const cardioFields = document.getElementById('cardioFields');
   const standardHelp = document.getElementById('standardHelp');
   const cardioHelp = document.getElementById('cardioHelp');
+  const timeSec = document.getElementById('time_s');
+  const timeMin = document.getElementById('time_min');
+
+  // The time is stored in seconds, but it can be entered in seconds or in
+  // minutes - never both, so typing in one field clears the other.
+  timeSec.addEventListener('input', function () {
+    if (timeSec.value !== '') timeMin.value = '';
+  });
+  timeMin.addEventListener('input', function () {
+    if (timeMin.value !== '') timeSec.value = '';
+  });
 
   function fillDatalist(values) {
     datalist.innerHTML = '';

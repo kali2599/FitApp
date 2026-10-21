@@ -94,6 +94,7 @@
                   <th style="width:6rem">Pace (km/min)</th>
                   <th style="width:5rem">Rounds</th>
                   <th style="width:5rem">Rest (s)</th>
+                  <th style="min-width:9rem">Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -110,6 +111,7 @@
                   <td><input class="form-control form-control-sm" name="pace_{{ s['id'] }}" value="{{ s['pace_km_per_min'] if s['pace_km_per_min'] is not none else '' }}"></td>
                   <td><input class="form-control form-control-sm" name="rounds_{{ s['id'] }}" value="{{ s['rounds'] if s['rounds'] is not none else '' }}"></td>
                   <td><input class="form-control form-control-sm" name="rest_{{ s['id'] }}" value="{{ s['rest_sec'] if s['rest_sec'] is not none else '' }}"></td>
+                  <td><input class="form-control form-control-sm" name="notes_{{ s['id'] }}" value="{{ s['notes'] if s['notes'] is not none else '' }}" placeholder="Optional"></td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -136,6 +138,7 @@
                   <th style="width:6rem">Min</th>
                   <th style="width:6rem">Km</th>
                   <th style="width:5rem">Rest (s)</th>
+                  <th style="min-width:9rem">Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -153,6 +156,7 @@
                   <td><input class="form-control form-control-sm" name="duration_min_{{ s['id'] }}" value="{{ s['duration_min'] if s['duration_min'] is not none else '' }}"></td>
                   <td><input class="form-control form-control-sm" name="distance_{{ s['id'] }}" value="{{ s['distance_km'] if s['distance_km'] is not none else '' }}"></td>
                   <td><input class="form-control form-control-sm" name="rest_{{ s['id'] }}" value="{{ s['rest_sec'] if s['rest_sec'] is not none else '' }}"></td>
+                  <td><input class="form-control form-control-sm" name="notes_{{ s['id'] }}" value="{{ s['notes'] if s['notes'] is not none else '' }}" placeholder="Optional"></td>
                 </tr>
                 {% endfor %}
               </tbody>

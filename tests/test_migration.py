@@ -253,3 +253,85 @@ def test_old_checks_gain_cardio_label_and_tables(tmp_path):
             "VALUES (1, 'cardio', 'Running', '5', 'kg')"
         )
     con.close()
+
+
+ORPHAN_TABLES = ["workout_sessions", "session_entries", "skill_levels"]
+
+ORPHAN_SQL = """
+CREATE TABLE workout_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    workout_day_id INTEGER REFERENCES workout_days (id) ON DELETE SET NULL,
+    performed_date TEXT NOT NULL,
+    duration_min INTEGER, calories REAL, notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE session_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES workout_sessions (id) ON DELETE CASCADE,
+    kind TEXT NOT NULL, name TEXT NOT NULL, circuit_label TEXT,
+    sets INTEGER, reps INTEGER, metric TEXT, weight_kg REAL,
+    duration_sec INTEGER, duration_min REAL, distance_km REAL,
+    position INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE skill_levels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    skill TEXT NOT NULL, level TEXT NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0, score REAL NOT NULL,
+    UNIQUE (skill, level)
+);
+"""
+
+
+def test_empty_orphan_tables_are_dropped(tmp_path):
+    """Tables from the old design are removed while they hold nothing."""
+    path = str(tmp_path / "orphans.db")
+    app = create_app({"DATABASE": path, "TESTING": True})
+    con = sqlite3.connect(path)
+    con.executescript(ORPHAN_SQL)
+    con.commit()
+    con.close()
+    assert set(ORPHAN_TABLES) <= _tables(path)
+
+    with app.app_context():
+        from fitapp import db as fitdb
+        fitdb.init_db()
+
+    assert not (set(ORPHAN_TABLES) & _tables(path))
+
+
+def test_orphan_tables_with_data_are_kept(tmp_path):
+    """A populated table is never dropped, and no data is destroyed."""
+    path = str(tmp_path / "orphans_data.db")
+    app = create_app({"DATABASE": path, "TESTING": True})
+    con = sqlite3.connect(path)
+    con.executescript(ORPHAN_SQL)
+    con.execute(
+        "INSERT INTO skill_levels (skill, level, position, score) VALUES ('Planche', 'A', 0, 1)"
+    )
+    con.commit()
+    con.close()
+
+    with app.app_context():
+        from fitapp import db as fitdb
+        fitdb.init_db()
+
+    assert "skill_levels" in _tables(path)
+    assert _count(path, "skill_levels") == 1
+
+
+def test_orphan_drop_is_idempotent(tmp_path):
+    path = str(tmp_path / "orphans_twice.db")
+    app = create_app({"DATABASE": path, "TESTING": True})
+    con = sqlite3.connect(path)
+    con.executescript(ORPHAN_SQL)
+    con.commit()
+    con.close()
+
+    with app.app_context():
+        from fitapp import db as fitdb
+        fitdb.init_db()
+        fitdb.init_db()
+
+    assert not (set(ORPHAN_TABLES) & _tables(path))
+    assert "library_exercises" in _tables(path)

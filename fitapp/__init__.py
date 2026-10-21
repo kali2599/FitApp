@@ -14,6 +14,7 @@ from .routes.library import bp as library_bp
 from .routes.profile import bp as profile_bp
 from .routes.stats import bp as stats_bp
 from .routes.sports import bp as sports_bp
+from .utils import format_duration
 
 
 def create_app(config_overrides=None):
@@ -28,6 +29,8 @@ def create_app(config_overrides=None):
         app.config.update(config_overrides)
 
     db.init_app(app)
+
+    app.jinja_env.filters["duration"] = format_duration
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)

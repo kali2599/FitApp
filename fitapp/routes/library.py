@@ -633,10 +633,17 @@ def _module_form_context(db, data, editing, module_id=None):
             (g.user["id"],),
         ).fetchall()
     ]
-    names = {row["id"]: row["name"] for row in exercises}
-    names.update({row["id"]: row["name"] for row in circuits})
+    # Exercise and circuit ids live in separate sequences, so each kind needs
+    # its own name lookup: a single merged map would show the wrong name
+    # whenever an exercise and a circuit share a numeric id.
+    exercise_names = {row["id"]: row["name"] for row in exercises}
+    circuit_names = {row["id"]: row["name"] for row in circuits}
     items = [
-        {"type": kind, "id": item_id, "name": names.get(item_id, "?")}
+        {
+            "type": kind,
+            "id": item_id,
+            "name": (exercise_names if kind == "exercise" else circuit_names).get(item_id, "?"),
+        }
         for kind, item_id in data["items"]
     ]
     return {

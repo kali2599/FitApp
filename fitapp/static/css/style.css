@@ -183,13 +183,6 @@ h1.h3 {
 .stat-icon.red { background-image: linear-gradient(135deg, #ef4444, #be123c); }
 .stat-icon.blue { background-image: linear-gradient(135deg, #2563eb, #38bdf8); }
 
-.circuit-block {
-  background: linear-gradient(135deg, #f5f3ff, #eef2ff);
-  border: 1px dashed #c4b5fd;
-}
-
-.exercise-card { background: #fbfbff; }
-
 .day-card { border: 2px solid #d4d4d8; }
 .day-card > .card-header { border-bottom: 1px solid rgba(0,0,0,.05); }
 .day-card .day-index {
@@ -367,7 +360,6 @@ h1.h3 {
 }
 
 /* ---------- misc ---------- */
-details summary { cursor: pointer; user-select: none; }
 
 .nav-pills .nav-link { font-weight: 600; color: #4338ca; }
 .nav-pills .nav-link.active {

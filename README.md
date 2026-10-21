@@ -11,7 +11,7 @@ you eat, chase your goals, and watch your body change.
   reusable workouts and days. Maintain a personal **library** of exercises and
   mini-circuits, plus **modules** (ordered combinations of the two). Build a day from
   the library: drop in a module, a mini-circuit or a single exercise, then set the
-  prescriptions (sets, reps, weight, duration, distance, rest — `max` allowed) that
+  prescriptions (sets, reps, weight, duration, distance, rest, notes — `max` allowed) that
   apply to that day only. Cardio-labelled exercises use their own attribute set:
   distance (m), time (s or min), pace (km/min), rounds and rest (s). Reuse a module
   across days and sports; edit it once and every dependent day re-syncs.
@@ -116,8 +116,10 @@ pytest tests/test_sports.py -k prescriptions
 ```
 
 Coverage: the library CRUD and per-user isolation, the sport → workout → day →
-builder flow and its per-day prescriptions, admin (no exercise catalog), the
-legacy → unified library migration, and a render check over every top-level page.
+builder flow and its per-day prescriptions (including notes and distance), the
+goal forms (standard and cardio), the lifestyle profile, admin (no exercise
+catalog), the legacy → unified library migration, the cleanup of the tables left
+over from the old design, and a render check over every top-level page.
 
 ## Useful commands
 
