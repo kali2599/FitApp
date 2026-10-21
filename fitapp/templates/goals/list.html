@@ -10,15 +10,6 @@
 </div>
 
 <ul class="nav nav-pills mb-3">
-  <li class="nav-item">
-    <a class="nav-link active" href="{{ url_for('goals.index') }}">Goals</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('cardio_goals.index') }}">Cardio goals</a>
-  </li>
-</ul>
-
-<ul class="nav nav-pills mb-3">
   {% for status in statuses %}
   <li class="nav-item">
     <a class="nav-link {% if status == active_status %}active{% endif %}"
@@ -35,20 +26,24 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
-            <span class="badge {{ {'body': 'text-bg-info', 'skill': 'text-bg-primary', 'strength': 'text-bg-warning'}.get(goal['goal_type'], 'text-bg-secondary') }}">
+            <span class="badge {{ {'body': 'text-bg-info', 'skill': 'text-bg-primary', 'strength': 'text-bg-warning', 'cardio': 'text-bg-success'}.get(goal['goal_type'], 'text-bg-secondary') }}">
               {{ goal['goal_type'] }}
             </span>
             <h2 class="h6 mt-2 mb-0">{{ goal['category'] }}</h2>
           </div>
           <div class="btn-group">
-            <a class="btn btn-sm btn-outline-success" href="{{ url_for('goals.edit', goal_id=goal['id']) }}">
+            <a class="btn btn-sm btn-outline-success"
+               href="{{ url_for('goals.edit_cardio', goal_id=goal['id']) if goal['is_cardio'] else url_for('goals.edit', goal_id=goal['id']) }}">
               <i class="bi bi-pencil"></i>
             </a>
-            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('goals.log', goal_id=goal['id']) }}"
+            <a class="btn btn-sm btn-outline-primary"
+               href="{{ url_for('goals.log_cardio', goal_id=goal['id']) if goal['is_cardio'] else url_for('goals.log', goal_id=goal['id']) }}"
                title="Log progress">
               <i class="bi bi-plus-lg"></i>
             </a>
-            <form class="d-inline" action="{{ url_for('goals.delete', goal_id=goal['id']) }}" method="post"
+            <form class="d-inline"
+                  action="{{ url_for('goals.delete_cardio', goal_id=goal['id']) if goal['is_cardio'] else url_for('goals.delete', goal_id=goal['id']) }}"
+                  method="post"
                   onsubmit="return confirm('Delete this goal?');">
               <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
             </form>
@@ -70,15 +65,41 @@
             <span class="text-muted">Target</span>
             <span class="fw-semibold">{{ goal['target_value'] }}{{ goal['unit'] }}</span>
           </li>
+          {% if goal['is_cardio'] %}
+          {% if goal['time_s'] is not none %}
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Time</span>
+            <span>{{ goal['time_s'] }}s{% if goal['time_min'] is not none %} ({{ goal['time_min'] }} min){% endif %}</span>
+          </li>
+          {% endif %}
+          {% if goal['pace_km_per_min'] is not none %}
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Pace</span><span>{{ goal['pace_km_per_min'] }} km/min</span>
+          </li>
+          {% endif %}
+          {% if goal['rounds'] is not none %}
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Rounds</span><span>{{ goal['rounds'] }}</span>
+          </li>
+          {% endif %}
+          {% if goal['rest_s'] is not none %}
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Rest</span><span>{{ goal['rest_s'] }}s</span>
+          </li>
+          {% endif %}
+          {% else %}
           {% if goal['start_value'] is not none and goal['start_value'] != '' %}
           <li class="d-flex justify-content-between">
             <span class="text-muted">Start</span><span>{{ goal['start_value'] }}{{ goal['unit'] }}</span>
           </li>
           {% endif %}
+          {% endif %}
           <li class="d-flex justify-content-between">
             <span class="text-muted">Current</span>
             {% if item['current'] is not none %}
             <span class="fw-semibold">{{ item['current'] }}{{ goal['unit'] }}</span>
+            {% elif goal['is_cardio'] %}
+            <span class="text-muted fst-italic small">no data &mdash; log distance to track progress</span>
             {% else %}
             <span class="text-muted fst-italic small">no data &mdash; log the exercise to track progress</span>
             {% endif %}
@@ -98,7 +119,8 @@
         <p class="small text-muted mt-2 mb-0">{{ goal['notes'] }}</p>
         {% endif %}
         <div class="mt-3">
-          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('goals.log', goal_id=goal['id']) }}">
+          <a class="btn btn-sm btn-outline-primary"
+             href="{{ url_for('goals.log_cardio', goal_id=goal['id']) if goal['is_cardio'] else url_for('goals.log', goal_id=goal['id']) }}">
             <i class="bi bi-plus-lg me-1"></i>Log progress
           </a>
         </div>

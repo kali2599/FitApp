@@ -16,11 +16,11 @@ you eat, chase your goals, and watch your body change.
   distance (m), time (s or min), pace (km/min), rounds and rest (s). Reuse a module
   across days and sports; edit it once and every dependent day re-syncs.
 - **Track your diet** — log meals with calories and macros and see your daily totals.
-- **Set goals, watch progress** — body, skill and strength goals with automatic
-  progress tracking and a simple way to log each step. Cardio goals live in their
-  own space with five attributes — distance (m), time (s or min), pace (km/min),
-  rounds and rest (s) — each carrying its own unit, with progress tracked on
-  distance.
+- **Set goals, watch progress** — body, skill, strength and cardio goals on one page,
+  with automatic progress tracking and a simple way to log each step. Cardio is a goal
+  type with five attributes — distance (m), time (s or min), pace (km/min), rounds and
+  rest (s) — each carrying its own unit, with progress tracked on distance logged
+  manually.
 - **Understand your body** — record weight, body fat and measurements over time and
   get a personal report: BMI, BMR, TDEE, calorie & macro targets, and tailored diet,
   training and recovery tips.
@@ -96,7 +96,7 @@ fitapp/
   progress.py           current value of a goal
   insights.py           BMI / BMR / TDEE / calorie & macro targets + suggestions
   utils.py              form parsing helpers, goal progress math
-  routes/               blueprints: dashboard, profile, sports, library, diets, goals, cardio_goals, stats, admin
+  routes/               blueprints: dashboard, profile, sports, library, diets, goals, stats, admin
   templates/            Jinja2 templates (Bootstrap 5)
   static/               custom CSS
   instance/fitapp.db    database file (created automatically)

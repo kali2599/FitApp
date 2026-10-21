@@ -27,8 +27,9 @@
                               ('workouts', 'bi-layers', 'Workouts'),
                               ('days', 'bi-calendar-week', 'Days'),
                               ('modules', 'bi-calendar-day', 'Modules'),
-                              ('goals', 'bi-bullseye', 'Goals'),
-                              ('meals', 'bi-cup-straw', 'Meals'),
+                                ('goals', 'bi-bullseye', 'Goals'),
+                                ('cardio_goals', 'bi-heart-pulse', 'Cardio goals'),
+                                ('meals', 'bi-cup-straw', 'Meals'),
                               ('measurements', 'bi-rulers', 'Measurements')] %}
   <div class="col-6 col-md-4 col-xl-2">
     <div class="card stat-card h-100 shadow-sm border-0">
@@ -74,7 +75,7 @@
       <div class="col-md-6">
         <div class="border rounded p-3 h-100">
           <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="badge {{ {'body': 'text-bg-info', 'skill': 'text-bg-primary', 'strength': 'text-bg-warning'}.get(goal['goal_type'], 'text-bg-secondary') }}">{{ goal['goal_type'] }}</span>
+            <span class="badge {{ {'body': 'text-bg-info', 'skill': 'text-bg-primary', 'strength': 'text-bg-warning', 'cardio': 'text-bg-success'}.get(goal['goal_type'], 'text-bg-secondary') }}">{{ goal['goal_type'] }}</span>
             <span class="small text-muted">{{ goal['unit'] }}</span>
           </div>
           <div class="fw-semibold">{{ goal['category'] }}</div>

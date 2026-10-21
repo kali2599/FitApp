@@ -24,9 +24,11 @@ def _context():
     totals = db.execute(
         """SELECT
              (SELECT COUNT(*) FROM diets WHERE user_id = ?) AS meals,
-             (SELECT COUNT(*) FROM goals WHERE user_id = ? AND status = 'active') AS active_goals,
+             (SELECT COUNT(*) FROM goals WHERE user_id = ? AND status = 'active')
+             + (SELECT COUNT(*) FROM cardio_goals WHERE user_id = ? AND status = 'active')
+               AS active_goals,
              (SELECT COUNT(*) FROM body_stats WHERE user_id = ?) AS stat_entries""",
-        (g.user["id"],) * 3,
+        (g.user["id"],) * 4,
     ).fetchone()
 
     return {"stats": stats, "totals": totals, "sexes": SEXES}

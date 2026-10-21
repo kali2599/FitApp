@@ -14,6 +14,7 @@ from werkzeug.security import generate_password_hash
 from .. import progress
 from ..auth import admin_required
 from ..db import get_db
+from .goals import _cardio_as_goal, _cardio_current, _cardio_percent
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -29,9 +30,10 @@ def _counts(db, user_id):
              (SELECT COUNT(*) FROM workout_modules m
                 WHERE m.user_id = ?) AS modules,
              (SELECT COUNT(*) FROM goals WHERE user_id = ?) AS goals,
+             (SELECT COUNT(*) FROM cardio_goals WHERE user_id = ?) AS cardio_goals,
              (SELECT COUNT(*) FROM diets WHERE user_id = ?) AS meals,
              (SELECT COUNT(*) FROM body_stats WHERE user_id = ?) AS measurements""",
-        (user_id,) * 7,
+        (user_id,) * 8,
     ).fetchone()
 
 
@@ -87,6 +89,9 @@ def user_detail(user_id):
     any_goal = db.execute(
         "SELECT id FROM goals WHERE user_id = ? LIMIT 1", (user_id,)
     ).fetchone()
+    any_cardio = db.execute(
+        "SELECT id FROM cardio_goals WHERE user_id = ? LIMIT 1", (user_id,)
+    ).fetchone()
     goals = []
     if any_goal is not None:
         rows = db.execute(
@@ -98,10 +103,27 @@ def user_detail(user_id):
             current, source = progress.current_value(db, user_id, goal)
             goals.append(
                 {
-                    "goal": goal,
+                    "goal": dict(goal, is_cardio=False),
                     "current": current,
                     "source": source,
                     "percent": progress.percent(db, goal, current),
+                }
+            )
+    if any_cardio is not None:
+        rows = db.execute(
+            """SELECT * FROM cardio_goals WHERE user_id = ? AND status = 'active'
+               ORDER BY (target_date IS NULL), target_date, id DESC""",
+            (user_id,),
+        ).fetchall()
+        for row in rows:
+            goal = _cardio_as_goal(row)
+            current, source = _cardio_current(db, goal)
+            goals.append(
+                {
+                    "goal": goal,
+                    "current": current,
+                    "source": source,
+                    "percent": _cardio_percent(goal, current),
                 }
             )
 

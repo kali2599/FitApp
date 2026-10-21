@@ -171,16 +171,16 @@ def test_cardio_label_and_goal(client, db):
     row = db.execute("SELECT * FROM library_exercises WHERE name = 'Rowing'").fetchone()
     assert row["label"] == "cardio"
 
-    # the cardio goal form lists the labelled library exercise
-    body = client.get("/cardio-goals/new").get_data(as_text=True)
+    # the unified goal form offers cardio and lists the labelled library exercise
+    body = client.get("/goals/new").get_data(as_text=True)
     assert "cardio" in body
     assert "Rowing" in body
 
     # a cardio goal with the 5 attribute fields is accepted
     r = client.post(
-        "/cardio-goals/new",
-        data={"category": "Running", "distance_m": "5000", "time_s": "1500",
-              "pace_km_per_min": "3.3", "rounds": "4", "rest_s": "60",
+        "/goals/new",
+        data={"goal_type": "cardio", "category": "Running", "distance_m": "5000",
+              "time_s": "1500", "pace_km_per_min": "3.3", "rounds": "4", "rest_s": "60",
               "status": "active"},
     )
     assert r.status_code == 302
@@ -193,19 +193,20 @@ def test_cardio_label_and_goal(client, db):
 
     # distance is required
     r = client.post(
-        "/cardio-goals/new",
-        data={"category": "Running", "status": "active"},
+        "/goals/new",
+        data={"goal_type": "cardio", "category": "Running", "status": "active"},
     )
     assert r.status_code == 400
 
-    # progress is tracked on distance (meters)
+    # progress is tracked on distance (meters), logged manually
     r = client.post(
-        "/cardio-goals/new",
-        data={"category": "Cycling", "distance_m": "20000", "status": "active"},
+        "/goals/new",
+        data={"goal_type": "cardio", "category": "Cycling", "distance_m": "20000",
+              "status": "active"},
     )
     assert r.status_code == 302
     goal = db.execute("SELECT * FROM cardio_goals WHERE category = 'Cycling'").fetchone()
-    client.post(f"/cardio-goals/{goal['id']}/log",
+    client.post(f"/goals/cardio/{goal['id']}/log",
                 data={"value": "10000", "logged_date": "2026-01-01"})
     log = db.execute("SELECT * FROM cardio_goal_logs WHERE cardio_goal_id = ?", (goal["id"],)).fetchone()
     assert log["value"] == "10000.0"
@@ -213,3 +214,44 @@ def test_cardio_label_and_goal(client, db):
     # the label field still rejects unknown values
     r = client.post("/library/exercises/new", data={"name": "Nope", "label": "bogus", "muscles": []})
     assert r.status_code == 400
+
+
+def test_goals_page_lists_standard_and_cardio_together(client, db):
+    """Strength and cardio goals share one list on /goals."""
+    make_user(client, "tester")
+    client.post("/goals/new", data={
+        "goal_type": "strength", "category": "Bench", "target_value": "100",
+        "unit": "kg", "status": "active",
+    })
+    client.post("/goals/new", data={
+        "goal_type": "cardio", "category": "Running", "distance_m": "5000",
+        "status": "active",
+    })
+
+    body = client.get("/goals/").get_data(as_text=True)
+    assert "Bench" in body
+    assert "Running" in body
+    assert "5000" in body
+
+    # each card links to its own type-scoped edit route
+    bench = db.execute("SELECT id FROM goals WHERE category = 'Bench'").fetchone()
+    cardio = db.execute("SELECT id FROM cardio_goals WHERE category = 'Running'").fetchone()
+    assert f"/goals/{bench['id']}/edit" in body
+    assert f"/goals/cardio/{cardio['id']}/edit" in body
+
+
+def test_standard_goal_cannot_become_cardio(client, db):
+    """Editing locks the goal type; a standard goal stays standard."""
+    make_user(client, "tester")
+    client.post("/goals/new", data={
+        "goal_type": "strength", "category": "Bench", "target_value": "100",
+        "unit": "kg", "status": "active",
+    })
+    bench = db.execute("SELECT id FROM goals WHERE category = 'Bench'").fetchone()
+
+    r = client.post(f"/goals/{bench['id']}/edit", data={
+        "goal_type": "cardio", "category": "Bench", "distance_m": "5000",
+        "status": "active",
+    })
+    assert r.status_code == 400
+    assert db.execute("SELECT COUNT(*) AS n FROM cardio_goals").fetchone()["n"] == 0

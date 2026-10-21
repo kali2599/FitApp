@@ -53,6 +53,23 @@ def test_admin_user_detail_shows_day_sets(client, db):
     assert boss  # admin session active
 
 
+def test_admin_user_detail_shows_cardio_goals(client, db):
+    """Admin user detail includes the user's active cardio goals."""
+    make_admin(client, "boss")
+    make_user(client, "alice")
+    client.post("/goals/new", data={
+        "goal_type": "cardio", "category": "Running", "distance_m": "5000",
+        "status": "active",
+    })
+
+    alice = scalar(db, "SELECT id FROM users WHERE username = 'alice'")
+    client.post("/logout")
+    client.post("/login", data={"username": "boss", "password": "secret1"})
+    body = client.get(f"/admin/users/{alice}").get_data(as_text=True)
+    assert "Running" in body
+    assert "cardio" in body
+
+
 PERSONAL_PAGES = ["/", "/sports/", "/diets/", "/goals/", "/stats/"]
 
 

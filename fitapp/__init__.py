@@ -7,7 +7,6 @@ from flask import Flask
 from . import db
 from .auth import bp as auth_bp
 from .routes.admin import bp as admin_bp
-from .routes.cardio_goals import bp as cardio_goals_bp
 from .routes.dashboard import bp as dashboard_bp
 from .routes.diets import bp as diets_bp
 from .routes.goals import bp as goals_bp
@@ -38,7 +37,6 @@ def create_app(config_overrides=None):
     app.register_blueprint(library_bp)
     app.register_blueprint(diets_bp)
     app.register_blueprint(goals_bp)
-    app.register_blueprint(cardio_goals_bp)
     app.register_blueprint(stats_bp)
 
     with app.app_context():

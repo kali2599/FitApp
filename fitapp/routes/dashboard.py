@@ -6,6 +6,7 @@ from .. import progress
 from ..auth import login_required
 from ..db import get_db
 from ..insights import compute
+from .goals import _cardio_as_goal, _cardio_current, _cardio_percent
 
 bp = Blueprint("dashboard", __name__)
 
@@ -83,10 +84,26 @@ def index():
         current, source = progress.current_value(db, uid, goal)
         goal_cards.append(
             {
-                "goal": goal,
+                "goal": dict(goal, is_cardio=False),
                 "current": current,
                 "source": source,
                 "percent": progress.percent(db, goal, current),
+            }
+        )
+    cardio_goals = db.execute(
+        """SELECT * FROM cardio_goals WHERE user_id = ? AND status = 'active'
+           ORDER BY (target_date IS NULL), target_date""",
+        (uid,),
+    ).fetchall()
+    for row in cardio_goals:
+        goal = _cardio_as_goal(row)
+        current, source = _cardio_current(db, goal)
+        goal_cards.append(
+            {
+                "goal": goal,
+                "current": current,
+                "source": source,
+                "percent": _cardio_percent(goal, current),
             }
         )
 
