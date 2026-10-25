@@ -181,8 +181,7 @@ def lifestyle():
                  daily_calories = excluded.daily_calories,
                  goal_direction = excluded.goal_direction,
                  water_cups = excluded.water_cups,
-                 stress_level = excluded.stress_level,
-                 updated_at = datetime('now')""",
+                 stress_level = excluded.stress_level""",
             (
                 g.user["id"],
                 values["sessions_per_week"],

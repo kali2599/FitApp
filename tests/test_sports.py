@@ -222,6 +222,55 @@ def test_cardio_prescriptions_saved(client, db):
             row["rounds"], row["rest_sec"]) == (5000.0, 1500, 3.3, 4, 60)
 
 
+def test_module_resync_keeps_cardio_attributes(client, db):
+    """Editing a module re-syncs the days that use it, cardio numbers included."""
+    make_user(client, "tester")
+    client.post("/library/exercises/new", data={"name": "Running", "label": "cardio", "muscles": []})
+    running = scalar(db, "SELECT id FROM library_exercises WHERE name = 'Running'")
+    client.post("/library/modules/new", data={"name": "Cardio day", "item_type": ["exercise"],
+                                             "item_id": [str(running)]})
+    module = scalar(db, "SELECT id FROM workout_modules WHERE name = 'Cardio day'")
+
+    sport, workout, day = _setup_day(client, db)
+    base = f"/sports/{sport}/workouts/{workout}/days/{day}/build"
+    client.post(base, data={"target": f"m:{module}"})
+    set_id = scalar(db, "SELECT s.id FROM day_entry_sets s JOIN day_entries de ON de.id = s.day_entry_id "
+                        "WHERE de.workout_day_id = ?", day)
+    client.post(base, data={
+        "action": "save", "set_id": [str(set_id)],
+        f"distance_m_{set_id}": "5000", f"duration_sec_{set_id}": "1500",
+        f"duration_min_{set_id}": "", f"pace_{set_id}": "3.3",
+        f"rounds_{set_id}": "4", f"rest_{set_id}": "60", f"notes_{set_id}": "",
+    })
+
+    # editing the module re-syncs the day
+    client.post(f"/library/modules/{module}/edit",
+                data={"name": "Cardio day", "item_type": ["exercise"], "item_id": [str(running)]})
+
+    # the re-sync writes new set rows, so look the prescription up again
+    new_set_id = scalar(db, "SELECT s.id FROM day_entry_sets s JOIN day_entries de ON de.id = s.day_entry_id "
+                             "WHERE de.workout_day_id = ?", day)
+    row = db.execute("SELECT distance_m, duration_sec, pace_km_per_min, rounds "
+                     "FROM day_entry_sets WHERE id = ?", (new_set_id,)).fetchone()
+    assert (row["distance_m"], row["duration_sec"], row["pace_km_per_min"],
+            row["rounds"]) == (5000.0, 1500, 3.3, 4)
+
+
+def test_sport_detail_shows_module_and_exercise_counts(client, db):
+    """The workout cards count the modules and the exercises of the plan."""
+    make_user(client, "tester")
+    lib = _setup_library(client, db)
+    sport, workout, day = _setup_day(client, db)
+    base = f"/sports/{sport}/workouts/{workout}/days/{day}/build"
+    client.post(base, data={"target": f"m:{lib['module']}"})
+    client.post(base, data={"target": f"e:{lib['pushup']}"})
+
+    html = client.get(f"/sports/{sport}").get_data(as_text=True)
+    # the module expands to plank + circuit members, so 3 sets in the day
+    assert "1 module" in html
+    assert "4 exercises" in html
+
+
 def test_remove_entry_cascades(client, db):
     make_user(client, "tester")
     lib = _setup_library(client, db)

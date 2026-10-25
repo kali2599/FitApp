@@ -86,7 +86,11 @@ def _workout_stats(db, sport_id):
                   (SELECT COUNT(*) FROM workout_days d WHERE d.workout_id = w.id) AS day_count,
                   (SELECT COUNT(*) FROM day_entries e
                      JOIN workout_days d ON d.id = e.workout_day_id
-                    WHERE d.workout_id = w.id) AS entry_count
+                    WHERE d.workout_id = w.id AND e.module_id IS NOT NULL) AS module_count,
+                  (SELECT COUNT(*) FROM day_entry_sets s
+                     JOIN day_entries e ON e.id = s.day_entry_id
+                     JOIN workout_days d ON d.id = e.workout_day_id
+                    WHERE d.workout_id = w.id) AS exercise_count
            FROM workouts w
            WHERE w.sport_id = ?
            ORDER BY w.position, w.id""",

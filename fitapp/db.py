@@ -1,3 +1,4 @@
+import re
 import sqlite3
 
 import click
@@ -83,7 +84,7 @@ CREATE TABLE IF NOT EXISTS goals (
     goal_type    TEXT NOT NULL CHECK (goal_type IN ('body', 'skill', 'strength')),
     category     TEXT NOT NULL,
     target_value TEXT NOT NULL,
-    unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps', 'levels')),
+    unit         TEXT NOT NULL CHECK (unit IN ('kg', '%', 'seconds', 'reps')),
     start_value  TEXT,
     target_date  TEXT,
     status       TEXT NOT NULL DEFAULT 'active'
@@ -114,8 +115,7 @@ CREATE TABLE IF NOT EXISTS cardio_goal_logs (
     cardio_goal_id INTEGER NOT NULL REFERENCES cardio_goals (id) ON DELETE CASCADE,
     value         TEXT NOT NULL,
     logged_date   TEXT NOT NULL,
-    notes         TEXT,
-    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    notes         TEXT
 );
 
 CREATE TABLE IF NOT EXISTS user_lifestyle (
@@ -129,8 +129,7 @@ CREATE TABLE IF NOT EXISTS user_lifestyle (
     daily_calories      REAL,
     goal_direction      TEXT CHECK (goal_direction IN ('lose', 'maintain', 'gain')),
     water_cups          REAL,
-    stress_level        TEXT CHECK (stress_level IN ('low', 'moderate', 'high')),
-    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+    stress_level        TEXT CHECK (stress_level IN ('low', 'moderate', 'high'))
 );
 
 CREATE TABLE IF NOT EXISTS goal_logs (
@@ -139,8 +138,7 @@ CREATE TABLE IF NOT EXISTS goal_logs (
     goal_id     INTEGER NOT NULL REFERENCES goals (id) ON DELETE CASCADE,
     value       TEXT NOT NULL,
     logged_date TEXT NOT NULL,
-    notes       TEXT,
-    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    notes       TEXT
 );
 
 CREATE TABLE IF NOT EXISTS library_exercises (
@@ -672,8 +670,7 @@ def _migrate_cardio_goals(db):
                 cardio_goal_id INTEGER NOT NULL REFERENCES cardio_goals (id) ON DELETE CASCADE,
                 value          TEXT NOT NULL,
                 logged_date    TEXT NOT NULL,
-                notes          TEXT,
-                created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+                notes          TEXT
             );
         """)
 
@@ -722,28 +719,178 @@ def _migrate_cardio_goals(db):
                 db.execute(f"ALTER TABLE day_entry_sets ADD COLUMN {name} {decl}")
 
 
-def _migrate_drop_orphans(db):
-    """Drop tables left behind by an older schema that the app no longer uses.
+# --------------------------------------------------------------------------- #
+# schema reconciliation
+#
+# SCHEMA is the single source of truth. CREATE TABLE IF NOT EXISTS cannot
+# change a table that already exists, so a database created by an older
+# version keeps whatever shape the migrations left behind. _sync_schema()
+# makes the live database match SCHEMA exactly: every table that drifted is
+# rebuilt with its native definition, and tables the app no longer knows
+# about are dropped while they are still empty.
+# --------------------------------------------------------------------------- #
 
-    workout_sessions, session_entries and skill_levels belong to a previous
-    design. They are removed only while every one of them is empty, so a
-    table that ever holds data is never touched.
+_NATIVE_REFERENCE = None
+
+
+def _native_reference():
+    """The canonical schema, built in memory from SCHEMA.
+
+    Returns {table name: {"ddl": ..., "columns": [...]}} for every table the
+    app owns. Building it in memory keeps the native definition in exactly
+    one place: the SCHEMA string.
     """
-    orphans = ("session_entries", "workout_sessions", "skill_levels")
-    present = [name for name in orphans if _table_exists(db, name)]
-    if not present:
-        return
+    global _NATIVE_REFERENCE
+    if _NATIVE_REFERENCE is None:
+        reference = sqlite3.connect(":memory:")
+        reference.executescript(SCHEMA)
+        tables = {}
+        for name, ddl in reference.execute(
+            "SELECT name, sql FROM sqlite_master "
+            "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+        ):
+            columns = [row[1] for row in reference.execute(f"PRAGMA table_info({name})")]
+            tables[name] = {"ddl": ddl, "columns": columns}
+        reference.close()
+        _NATIVE_REFERENCE = tables
+    return _NATIVE_REFERENCE
 
-    for name in present:
-        count = db.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
-        if count:
-            return
 
+def _normalize_ddl(sql):
+    """Compare two CREATE statements by shape rather than by formatting.
+
+    A table rebuilt by a migration is stored with its name quoted, and the
+    whitespace of the original statement survives, so both are normalized
+    away before the definitions are compared.
+    """
+    text = " ".join((sql or "").split())
+    text = re.sub(r'"(\w+)"', r"\1", text)
+    text = re.sub(r"\bIF NOT EXISTS\b", "", text)
+    return text
+
+
+def _live_tables(db):
+    return {
+        row["name"]
+        for row in db.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+        )
+    }
+
+
+def _referencing_tables(db, name):
+    """The live tables that declare a foreign key pointing at `name`."""
+    referencing = []
+    for table in _live_tables(db):
+        for fk in db.execute(f"PRAGMA foreign_key_list({table})").fetchall():
+            if fk["table"] == name:
+                referencing.append(table)
+                break
+    return referencing
+
+
+def _rebuild_table(db, name, native):
+    """Recreate a table with its native definition, keeping the rows it has.
+
+    Rows are copied one at a time so a row that no longer satisfies the
+    native constraints (a goal with a unit the schema no longer allows, for
+    instance) is skipped instead of aborting the whole rebuild. The work
+    happens in a single transaction, so a failure leaves the original table
+    untouched.
+    """
+    tmp = f"{name}__native"
+    native_ddl = re.sub(
+        r"^(CREATE TABLE )(IF NOT EXISTS )?" + re.escape(name) + r"\b",
+        rf"\1\2{tmp}",
+        native["ddl"],
+        count=1,
+    )
+    live_columns = {row["name"] for row in db.execute(f"PRAGMA table_info({name})")}
+    shared = [column for column in native["columns"] if column in live_columns]
+    dropped = sorted(live_columns - set(native["columns"]))
+
+    db.commit()
     db.execute("PRAGMA foreign_keys = OFF")
+    skipped = []
     try:
-        db.executescript("".join(f"DROP TABLE IF EXISTS {name};" for name in present))
+        db.execute("BEGIN")
+        db.execute(f"DROP TABLE IF EXISTS {tmp}")
+        db.execute(native_ddl)
+        placeholders = ", ".join("?" * len(shared))
+        for row in db.execute(f"SELECT * FROM {name}").fetchall():
+            try:
+                db.execute(
+                    f"INSERT INTO {tmp} ({', '.join(shared)}) VALUES ({placeholders})",
+                    tuple(row[column] for column in shared),
+                )
+            except sqlite3.IntegrityError:
+                skipped.append(row["id"] if "id" in live_columns else None)
+        db.execute(f"DROP TABLE {name}")
+        db.execute(f"ALTER TABLE {tmp} RENAME TO {name}")
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.execute("PRAGMA foreign_keys = ON")
+    return skipped, dropped
+
+
+def _sync_schema(db):
+    """Make the live database match the native schema.
+
+    Returns a report of what changed: the tables that were rebuilt, the rows
+    that could not be copied, the columns that were dropped and the tables
+    that were removed.
+    """
+    reference = _native_reference()
+    live = _live_tables(db)
+    report = {
+        "rebuilt": [],
+        "skipped": [],
+        "dropped_columns": [],
+        "dropped_tables": [],
+        "kept_tables": [],
+    }
+
+    for name, native in reference.items():
+        if name not in live:
+            continue  # SCHEMA creates it right after this
+        row = db.execute(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)
+        ).fetchone()
+        if _normalize_ddl(row["sql"]) == _normalize_ddl(native["ddl"]):
+            continue
+        skipped, dropped_columns = _rebuild_table(db, name, native)
+        report["rebuilt"].append(name)
+        if skipped:
+            report["skipped"].append((name, skipped))
+        if dropped_columns:
+            report["dropped_columns"].append((name, dropped_columns))
+
+    # Tables the native schema does not know about are removed while they are
+    # empty. A table that still holds data is kept, and so is a table that
+    # another table points at - those are dropped first, so a parent never
+    # loses its children.
+    unknown = live - set(reference)
+    progress = True
+    while progress:
+        progress = False
+        for name in sorted(unknown):
+            if name in report["dropped_tables"] or name in report["kept_tables"]:
+                continue
+            count = db.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+            if count:
+                report["kept_tables"].append(name)
+                continue
+            if _referencing_tables(db, name):
+                continue
+            db.execute(f"DROP TABLE IF EXISTS {name}")
+            report["dropped_tables"].append(name)
+            progress = True
+
+    return report
 
 
 def _migrate_roles(db):
@@ -767,9 +914,16 @@ def init_db():
     _migrate_exercise_labels(db)
     _migrate_cardio_goals(db)
     _migrate_roles(db)
-    _migrate_drop_orphans(db)
+    report = _sync_schema(db)
     db.executescript(SCHEMA)
     db.commit()
+    if report["rebuilt"] or report["dropped_tables"] or report["skipped"]:
+        current_app.logger.info(
+            "schema sync: rebuilt=%s dropped=%s skipped=%s",
+            report["rebuilt"],
+            report["dropped_tables"],
+            report["skipped"],
+        )
 
 
 @click.command("init-db")

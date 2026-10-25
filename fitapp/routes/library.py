@@ -187,8 +187,9 @@ def _sync_module_days(db, module_id):
             db.execute(
                 "INSERT INTO day_entry_sets "
                 "(day_entry_id, position, exercise_id, circuit_id, sets, reps, weight_kg, "
-                " duration_sec, duration_min, distance_km, rest_sec, notes) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " duration_sec, duration_min, distance_km, rest_sec, distance_m, "
+                " pace_km_per_min, rounds, notes) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     entry,
                     position,
@@ -201,6 +202,9 @@ def _sync_module_days(db, module_id):
                     src["duration_min"] if src else None,
                     src["distance_km"] if src else None,
                     src["rest_sec"] if src else None,
+                    src["distance_m"] if src else None,
+                    src["pace_km_per_min"] if src else None,
+                    src["rounds"] if src else None,
                     src["notes"] if src else None,
                 ),
             )

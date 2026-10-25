@@ -25,7 +25,6 @@ UNIT_BY_TYPE = {
     "skill": ["seconds", "reps"],
     "strength": ["kg", "reps"],
 }
-NUMERIC_UNITS = {"kg", "%", "seconds", "reps"}
 
 CATEGORY_SUGGESTIONS = {
     "body": ["Weight", "Body fat"],

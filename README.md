@@ -118,8 +118,20 @@ pytest tests/test_sports.py -k prescriptions
 Coverage: the library CRUD and per-user isolation, the sport → workout → day →
 builder flow and its per-day prescriptions (including notes and distance), the
 goal forms (standard and cardio), the lifestyle profile, admin (no exercise
-catalog), the legacy → unified library migration, the cleanup of the tables left
-over from the old design, and a render check over every top-level page.
+catalog), the legacy → unified library migration, the schema reconciliation
+(a migrated database ends up identical to a fresh one), and a render check over
+every top-level page.
+
+## The schema is the source of truth
+
+`SCHEMA` in `fitapp/db.py` is the only description of the database. Migrations
+exist to carry an old database forward, but the last step of every start-up is
+`_sync_schema()`: it compares the live tables with the native ones and rebuilds
+the ones that drifted, so a database created by an older version ends up
+exactly like a fresh one — same columns, same constraints, same indexes. Rows
+are copied one at a time, so a row the current schema no longer allows is
+skipped (and logged) instead of blocking the start-up. Tables the schema does
+not know about are removed while they are still empty.
 
 ## Useful commands
 
