@@ -44,6 +44,7 @@
             </a>
             <form class="d-inline" action="{{ url_for('sports.day_delete', sport_id=sport['id'], workout_id=workout['id'], day_id=d['id']) }}"
                   method="post" onsubmit="return confirm('Delete this workout-day and all its modules?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-sm btn-outline-danger" type="submit" title="Delete day"><i class="bi bi-trash"></i></button>
             </form>
           </div>

@@ -1,8 +1,9 @@
 import datetime as dt
 import os
+import secrets
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, abort, request, session
 
 from . import db
 from .auth import bp as auth_bp
@@ -22,8 +23,12 @@ def create_app(config_overrides=None):
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
     app.config.from_mapping(
-        SECRET_KEY=os.environ.get("FITAPP_SECRET_KEY", "dev-secret-change-me"),
+        SECRET_KEY=os.environ.get("FITAPP_SECRET_KEY") or secrets.token_urlsafe(48),
         DATABASE=os.path.join(app.instance_path, "fitapp.db"),
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=os.environ.get("FITAPP_COOKIE_SECURE", "0").lower()
+        in {"1", "true", "yes"},
     )
     if config_overrides:
         app.config.update(config_overrides)
@@ -44,6 +49,28 @@ def create_app(config_overrides=None):
 
     with app.app_context():
         db.init_db()
+
+    @app.before_request
+    def protect_state_changes():
+        if app.testing:
+            return None
+        if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+            return None
+        expected = session.get("csrf_token")
+        supplied = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")
+        if not expected or not supplied or not secrets.compare_digest(expected, supplied):
+            abort(400, description="The form security token is missing or invalid. Reload the page and try again.")
+
+    @app.context_processor
+    def inject_csrf_token():
+        def csrf_token():
+            token = session.get("csrf_token")
+            if token is None:
+                token = secrets.token_urlsafe(32)
+                session["csrf_token"] = token
+            return token
+
+        return {"csrf_token": csrf_token}
 
     @app.context_processor
     def inject_year():

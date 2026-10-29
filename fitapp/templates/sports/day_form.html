@@ -18,6 +18,7 @@
       </div>
       <div class="card-body">
         <form method="post" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label class="form-label" for="day_name">Day name *</label>
             <input class="form-control" id="day_name" name="day_name" type="text"

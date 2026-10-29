@@ -31,7 +31,7 @@ def _counts(db, user_id):
                 WHERE m.user_id = ?) AS modules,
              (SELECT COUNT(*) FROM goals WHERE user_id = ?) AS goals,
              (SELECT COUNT(*) FROM cardio_goals WHERE user_id = ?) AS cardio_goals,
-             (SELECT COUNT(*) FROM diets WHERE user_id = ?) AS meals,
+             (SELECT COUNT(*) FROM diet_plans WHERE user_id = ?) AS diet_plans,
              (SELECT COUNT(*) FROM body_stats WHERE user_id = ?) AS measurements""",
         (user_id,) * 8,
     ).fetchone()
@@ -133,9 +133,9 @@ def user_detail(user_id):
         (user_id,),
     ).fetchall()
 
-    meals = db.execute(
-        """SELECT * FROM diets WHERE user_id = ?
-           ORDER BY diet_date DESC, id DESC LIMIT 10""",
+    diet_plans = db.execute(
+        """SELECT * FROM diet_plans WHERE user_id = ?
+           ORDER BY created_at DESC, id DESC LIMIT 10""",
         (user_id,),
     ).fetchall()
 
@@ -146,7 +146,7 @@ def user_detail(user_id):
         sports=sports,
         goals=goals,
         stats=stats,
-        meals=meals,
+        diet_plans=diet_plans,
     )
 
 

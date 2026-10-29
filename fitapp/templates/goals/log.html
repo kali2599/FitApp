@@ -20,6 +20,7 @@
           {% endif %}
         </p>
         <form method="post" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="row">
             <div class="col-md-4 mb-3">
               <label class="form-label" for="value">Value * ({{ goal['unit'] }})</label>
@@ -67,6 +68,7 @@
                 <form class="d-inline"
                       action="{{ url_for('goals.delete_log_cardio', goal_id=goal['id'], log_id=log['id']) if goal['is_cardio'] else url_for('goals.delete_log', goal_id=goal['id'], log_id=log['id']) }}"
                       method="post" onsubmit="return confirm('Delete this progress entry?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
                 </form>
               </td>

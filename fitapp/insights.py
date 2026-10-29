@@ -16,9 +16,9 @@ INTENSITIES = {
 }
 
 STRESS_SUGGESTIONS = {
-    "low": ("Recovery looks good", "Your reported stress is low, which supports consistent training and sleep."),
-    "moderate": ("Watch your recovery", "Moderate stress can build up. Add a deload week or an extra rest day when it feels heavy."),
-    "high": ("Prioritise recovery", "High stress raises cortisol and slows progress. Cut training volume, sleep more and keep meals regular."),
+    "low": ("Reported stress", "You reported low stress. This is a profile summary, not an assessment of recovery."),
+    "moderate": ("Reported stress", "You reported moderate stress. Consider how your current routine feels alongside this self-reported rating."),
+    "high": ("Review your recovery", "You reported high stress. Consider whether your current training load and recovery routines feel manageable."),
 }
 
 DIRECTION_LABELS = {
@@ -148,56 +148,24 @@ def compute(user, stat, lifestyle=None):
         protein_per_kg = 2.0 if direction == "lose" else 1.7
         metrics["protein_g"] = round(weight_kg * protein_per_kg)
         metrics["fat_g"] = round(target * 0.25 / 9)
-        metrics["carbs_g"] = round((target - weight_kg * protein_per_kg * 4 - target * 0.25) / 4)
+        metrics["carbs_g"] = max(0, round((target - weight_kg * protein_per_kg * 4 - target * 0.25) / 4))
 
-        if lifestyle.get("daily_calories"):
-            intake = lifestyle["daily_calories"]
-            delta = intake - target
-            metrics["calorie_delta"] = _round(delta, 0)
-            if direction == "lose" and delta > 0:
-                suggestions.append(
-                    {
-                        "tone": "warning",
-                        "icon": "bi-egg-fried",
-                        "title": f"Eat about {_round(delta, 0)} less per day",
-                        "text": f"Your logged intake ({_round(intake, 0)} kcal) exceeds the {_round(target, 0)} kcal needed to lose weight. A deficit of ~450 kcal/week drops roughly 0.5 kg of fat.",
-                    }
-                )
-            elif direction == "gain" and delta < 0:
-                suggestions.append(
-                    {
-                        "tone": "warning",
-                        "icon": "bi-egg-fried",
-                        "title": f"Add about {_round(-delta, 0)} kcal per day",
-                        "text": f"Your intake ({_round(intake, 0)} kcal) is below the {_round(target, 0)} kcal target for muscle gain. Add an extra snack or a larger portion.",
-                    }
-                )
-            else:
-                suggestions.append(
-                    {
-                        "tone": "success",
-                        "icon": "bi-check2-circle",
-                        "title": "Calories look on track",
-                        "text": f"Intake of {_round(intake, 0)} kcal/day matches the {_round(target, 0)} kcal target for {DIRECTION_LABELS[direction]}.",
-                    }
-                )
-        else:
-            suggestions.append(
-                {
-                    "tone": "info",
-                    "icon": "bi-calculator",
-                    "title": f"Aim for ~{_round(target, 0)} kcal/day",
-                    "text": f"Your estimated maintenance is ~{_round(tdee, 0)} kcal/day. For {DIRECTION_LABELS[direction]}, target ~{_round(target, 0)} kcal and set protein at ~{metrics['protein_g']} g/day.",
-                }
-            )
+        suggestions.append(
+            {
+                "tone": "info",
+                "icon": "bi-calculator",
+                "title": f"Estimated starting point: ~{_round(target, 0)} kcal/day",
+                "text": f"This rough estimate uses your profile, an activity multiplier, and a {DIRECTION_LABELS[direction]} adjustment. It is not measured intake or a personalised prescription.",
+            }
+        )
 
         if direction == "lose":
             suggestions.append(
                 {
                     "tone": "info",
                     "icon": "bi-file-earmark-bar-graph",
-                    "title": "Keep protein high while cutting",
-                    "text": f"Aim for ~{metrics['protein_g']} g protein, ~{metrics['fat_g']} g fat and ~{metrics['carbs_g']} g carbs per day to protect muscle while losing fat.",
+                    "title": "Example macro split",
+                    "text": f"The app's simple estimate uses ~{metrics['protein_g']} g protein, ~{metrics['fat_g']} g fat and ~{metrics['carbs_g']} g carbohydrates. Adjust these to your needs and preferences.",
                 }
             )
     else:
@@ -218,7 +186,7 @@ def compute(user, stat, lifestyle=None):
                 "tone": "info",
                 "icon": "bi-percent",
                 "title": f"Body fat: {metrics['body_fat_category']}",
-                "text": f"At {_round(stat['body_fat_pct'])}%, resistance training plus a small calorie surplus builds lean mass; a deficit (with high protein) trims fat.",
+                "text": "Body-fat estimates depend on the measurement method and are best viewed as a trend over time.",
             }
         )
 
@@ -230,8 +198,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "success",
                     "icon": "bi-heart-pulse",
-                    "title": "Healthy waist-to-height ratio",
-                    "text": f"A ratio of {_round(ratio)} (< 0.5) is linked with lower cardio-metabolic risk. Keep it there.",
+                    "title": "Waist-to-height ratio",
+                    "text": f"Your ratio is {_round(ratio)}. The 0.5 threshold is a broad screening reference, not a diagnosis.",
                 }
             )
         else:
@@ -239,8 +207,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "warning",
                     "icon": "bi-heart-pulse",
-                    "title": "Trim your waist measurement",
-                    "text": f"A waist-to-height ratio of {_round(ratio)} (≥ 0.5) raises cardio-metabolic risk. A small calorie deficit plus core work will bring it down.",
+                    "title": "Waist-to-height ratio",
+                    "text": f"Your ratio is {_round(ratio)}. Values around or above 0.5 are sometimes used as a screening prompt; this is not a diagnosis or a specific training prescription.",
                 }
             )
 
@@ -251,8 +219,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "warning",
                     "icon": "bi-activity",
-                    "title": "Train at least twice a week",
-                    "text": f"You train ~{sessions}x/week. Aim for 2-3 full-body sessions to build a solid training base.",
+                    "title": "Training frequency",
+                    "text": f"You reported about {sessions} sessions per week. This is context for your profile; choose a schedule that suits your goals and recovery.",
                 }
             )
         elif sessions > 5:
@@ -260,8 +228,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "warning",
                     "icon": "bi-arrow-repeat",
-                    "title": "Leave a rest day",
-                    "text": f"{sessions} sessions a week is a lot. Schedule at least one full rest day and sleep well to recover.",
+                    "title": "Training frequency",
+                    "text": f"You reported {sessions} sessions per week. Consider how your energy and recovery feel at this frequency.",
                 }
             )
         else:
@@ -269,8 +237,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "success",
                     "icon": "bi-check2-circle",
-                    "title": "Good training frequency",
-                    "text": f"{sessions}x/week is a solid frequency for consistent progress.",
+                    "title": "Training frequency",
+                    "text": f"You reported {sessions} sessions per week. Training frequency is one part of your overall routine.",
                 }
             )
 
@@ -283,8 +251,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "warning",
                     "icon": "bi-clock-history",
-                    "title": "Build your weekly volume",
-                    "text": f"~{volume} min/week of training is light. Raising it to 150+ minutes delivers clearer changes in body composition.",
+                    "title": "Reported weekly training time",
+                    "text": f"Your profile adds up to about {volume} minutes per week. This is descriptive context, not a measure of training quality or a target.",
                 }
             )
         elif volume >= 300:
@@ -292,8 +260,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "success",
                     "icon": "bi-lightning-charge",
-                    "title": "Solid training volume",
-                    "text": f"~{volume} min/week keeps your {INTENSITIES.get(intensity, 'training') or 'training'} sessions effective.",
+                    "title": "Reported weekly training time",
+                    "text": f"Your profile adds up to about {volume} minutes per week at {INTENSITIES.get(intensity, 'unspecified intensity')}. This estimate does not assess workout quality.",
                 }
             )
         else:
@@ -301,8 +269,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "info",
                     "icon": "bi-graph-up-arrow",
-                    "title": "You are on the right path",
-                    "text": f"~{volume} min/week is good. Add 10% more volume only every 2-3 weeks to progress safely.",
+                    "title": "Reported weekly training time",
+                    "text": f"Your profile adds up to about {volume} minutes per week. Use this as a summary of your input, not a prescribed progression.",
                 }
             )
 
@@ -314,8 +282,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "warning",
                     "icon": "bi-moon-stars",
-                    "title": "Sleep a bit more",
-                    "text": f"~{sleep:g} h is below the 7-9 h that muscle recovery and appetite regulation need. Aim for 7+ h on training days.",
+                    "title": "Sleep duration",
+                    "text": f"You reported about {sleep:g} hours per night. Sleep needs vary; consider this alongside how rested you feel.",
                 }
             )
         elif sleep > 9:
@@ -323,8 +291,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "info",
                     "icon": "bi-moon",
-                    "title": "Sleep amount is high",
-                    "text": f"{sleep:g} h is fine occasionally, but very long nights can also mask low sleep quality. Keep a consistent wake time.",
+                    "title": "Sleep duration",
+                    "text": f"You reported about {sleep:g} hours per night. The app cannot assess sleep quality from duration alone.",
                 }
             )
         else:
@@ -332,8 +300,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "success",
                     "icon": "bi-check2-circle",
-                    "title": "Good sleep",
-                    "text": f"{sleep:g} h supports recovery and helps keep cravings in check.",
+                    "title": "Sleep duration",
+                    "text": f"You reported about {sleep:g} hours per night. This is a profile summary, not an assessment of sleep quality.",
                 }
             )
 
@@ -346,8 +314,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "info",
                     "icon": "bi-droplet-half",
-                    "title": "Drink more water",
-                    "text": f"At ~{_round(water)} cups/day you are below the ~{metrics['water_target_cups']} cups suggested for your body weight.",
+                    "title": "Water intake",
+                    "text": f"You reported about {_round(water)} cups per day. Hydration needs vary with climate, activity, diet, and health.",
                 }
             )
         else:
@@ -355,8 +323,8 @@ def compute(user, stat, lifestyle=None):
                 {
                     "tone": "success",
                     "icon": "bi-droplet-half",
-                    "title": "Good hydration",
-                    "text": f"~{_round(water)} cups/day covers your needs well.",
+                    "title": "Water intake",
+                    "text": f"You reported about {_round(water)} cups per day. The app cannot determine hydration needs from weight alone.",
                 }
             )
 
@@ -375,4 +343,8 @@ def compute(user, stat, lifestyle=None):
             }
         )
 
-    return {"metrics": metrics, "suggestions": suggestions}
+    return {
+        "metrics": metrics,
+        "suggestions": suggestions,
+        "disclaimer": "These are rough estimates, not measurements or medical advice. BMI does not distinguish muscle from fat. Energy estimates use a formula, your profile details, and an activity multiplier (sedentary when unset); lose/gain targets apply fixed adjustments of 17.5%/12.5%. Macro estimates use a simple split. Individual needs vary.",
+    }

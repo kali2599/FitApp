@@ -14,6 +14,7 @@
       </div>
       <div class="card-body">
         <form method="post" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3" style="max-width: 260px;">
             <label class="form-label" for="stat_date">Date *</label>
             <input class="form-control" id="stat_date" name="stat_date" type="date"

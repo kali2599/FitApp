@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlsplit
 from functools import wraps
 
 from flask import (
@@ -136,7 +137,13 @@ def login():
         session["user_id"] = user["id"]
         flash(f"Welcome back, {user['username']}!", "success")
         target = request.args.get("next")
-        if target and target.startswith("/"):
+        if (
+            target
+            and target.startswith("/")
+            and not target.startswith("//")
+            and "\\" not in target
+            and not urlsplit(target).netloc
+        ):
             return redirect(target)
         return redirect(url_for("dashboard.index"))
 

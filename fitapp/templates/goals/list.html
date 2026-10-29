@@ -45,6 +45,7 @@
                   action="{{ url_for('goals.delete_cardio', goal_id=goal['id']) if goal['is_cardio'] else url_for('goals.delete', goal_id=goal['id']) }}"
                   method="post"
                   onsubmit="return confirm('Delete this goal?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
             </form>
           </div>

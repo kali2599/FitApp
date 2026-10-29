@@ -7,6 +7,7 @@
       <div class="card-body p-4">
         <h1 class="h4 mb-3 text-center"><i class="bi bi-box-arrow-in-right me-2"></i>Log in</h1>
         <form method="post" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label class="form-label" for="username">Username or email</label>
             <input class="form-control" id="username" name="username" type="text"

@@ -15,6 +15,7 @@
   {% if user['role'] == 'user' %}
   <form action="{{ url_for('admin.user_reset_password', user_id=user['id']) }}" method="post"
         class="d-flex align-items-center gap-2 needs-validation" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input class="form-control form-control-sm" name="password" type="password" minlength="6"
            placeholder="New password" required>
     <button class="btn btn-sm btn-warning" type="submit">Reset password</button>
@@ -29,7 +30,7 @@
                               ('modules', 'bi-calendar-day', 'Modules'),
                                 ('goals', 'bi-bullseye', 'Goals'),
                                 ('cardio_goals', 'bi-heart-pulse', 'Cardio goals'),
-                                ('meals', 'bi-cup-straw', 'Meals'),
+                                ('diet_plans', 'bi-cup-straw', 'Diet plans'),
                               ('measurements', 'bi-rulers', 'Measurements')] %}
   <div class="col-6 col-md-4 col-xl-2">
     <div class="card stat-card h-100 shadow-sm border-0">
@@ -127,20 +128,19 @@
 </div>
 {% endif %}
 
-{% if meals %}
+{% if diet_plans %}
 <div class="card shadow-sm border-0 mb-3">
-  <div class="card-header fw-semibold"><i class="bi bi-cup-straw me-2"></i>Recent meals</div>
+  <div class="card-header fw-semibold"><i class="bi bi-cup-straw me-2"></i>Diet plans</div>
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>Date</th><th>Meal</th><th>Description</th><th class="text-end">Calories</th></tr></thead>
+        <thead class="table-light"><tr><th>Name</th><th>Guidance</th><th class="text-end">Daily target</th></tr></thead>
         <tbody>
-          {% for m in meals %}
+          {% for plan in diet_plans %}
           <tr>
-            <td>{{ m['diet_date'] }}</td>
-            <td>{{ m['meal_type'] }}</td>
-            <td>{{ m['description'] }}</td>
-            <td class="text-end">{{ m['calories'] or '—' }}</td>
+            <td>{{ plan['name'] }}</td>
+            <td>{{ plan['guidance'] or '—' }}</td>
+            <td class="text-end">{{ plan['calories']|int ~ ' kcal' if plan['calories'] is not none else '—' }}</td>
           </tr>
           {% endfor %}
         </tbody>

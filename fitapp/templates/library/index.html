@@ -58,6 +58,7 @@
           </a>
           <form class="d-inline" action="{{ url_for('library.module_delete', module_id=module['id']) }}"
                 method="post" onsubmit="return confirm('Delete this module? It will be removed from every day that uses it.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
           </form>
         </div>
@@ -97,6 +98,7 @@
           </a>
           <form class="d-inline" action="{{ url_for('library.exercise_delete', exercise_id=e['id']) }}"
                 method="post" onsubmit="return confirm('Delete this exercise? It will be removed from every module, circuit and day that uses it.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
           </form>
         </div>
@@ -130,6 +132,7 @@
           </a>
           <form class="d-inline" action="{{ url_for('library.circuit_delete', circuit_id=c['id']) }}"
                 method="post" onsubmit="return confirm('Delete this mini-circuit? It will be removed from every module and day that uses it.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
           </form>
         </div>

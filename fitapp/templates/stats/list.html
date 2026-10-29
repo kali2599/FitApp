@@ -42,10 +42,10 @@
       <div class="card-body">
         <div class="d-flex align-items-center gap-3 mb-2">
           <span class="stat-icon"><i class="bi bi-fire"></i></span>
-          <span class="text-muted small text-uppercase fw-semibold">BMR</span>
+          <span class="text-muted small text-uppercase fw-semibold">Estimated BMR</span>
         </div>
         <div class="fs-4 fw-bold">{{ m['bmr'] }} <span class="fs-6 text-muted">kcal</span></div>
-        <span class="small text-muted">while resting</span>
+        <span class="small text-muted">formula estimate at rest</span>
       </div>
     </div>
   </div>
@@ -54,10 +54,10 @@
       <div class="card-body">
         <div class="d-flex align-items-center gap-3 mb-2">
           <span class="stat-icon red"><i class="bi bi-battery-charging"></i></span>
-          <span class="text-muted small text-uppercase fw-semibold">TDEE</span>
+          <span class="text-muted small text-uppercase fw-semibold">Estimated TDEE</span>
         </div>
         <div class="fs-4 fw-bold">{{ m['tdee'] }} <span class="fs-6 text-muted">kcal</span></div>
-        <span class="small text-muted">daily energy use</span>
+        <span class="small text-muted">activity multiplier estimate</span>
       </div>
     </div>
   </div>
@@ -66,7 +66,7 @@
       <div class="card-body">
         <div class="d-flex align-items-center gap-3 mb-2">
           <span class="stat-icon fire"><i class="bi bi-bullseye"></i></span>
-          <span class="text-muted small text-uppercase fw-semibold">Calorie target</span>
+          <span class="text-muted small text-uppercase fw-semibold">Estimated calorie target</span>
         </div>
         <div class="fs-4 fw-bold">{{ m['calorie_target'] }} <span class="fs-6 text-muted">kcal</span></div>
         <span class="small text-muted">
@@ -97,6 +97,8 @@
 </div>
 {% endif %}
 
+<p class="small text-muted">{{ insight['disclaimer'] }}</p>
+
 <div class="card shadow-sm border-0 mb-4">
   <div class="card-header bg-white d-flex justify-content-between align-items-center">
     <span class="fw-semibold"><i class="bi bi-journal-text me-2"></i>Lifestyle</span>
@@ -108,7 +110,6 @@
       <div class="col-6 col-md">Training<br><span class="fw-semibold text-dark">{{ lifestyle['sessions_per_week'] if lifestyle['sessions_per_week'] is not none else '?' }}x/week</span></div>
       <div class="col-6 col-md">Activity<br><span class="fw-semibold text-dark">{{ lifestyle['activity_level'] or 'not set' }}</span></div>
       <div class="col-6 col-md">Sleep<br><span class="fw-semibold text-dark">{{ lifestyle['sleep_hours'] ~ ' h' if lifestyle['sleep_hours'] is not none else 'not set' }}</span></div>
-      <div class="col-6 col-md">Calories<br><span class="fw-semibold text-dark">{{ lifestyle['daily_calories']|int ~ ' kcal' if lifestyle['daily_calories'] is not none else 'not set' }}</span></div>
       <div class="col-6 col-md">Goal<br><span class="fw-semibold text-dark">{{ lifestyle['goal_direction'] or 'not set' }}</span></div>
     </div>
     {% else %}

@@ -8,7 +8,7 @@
   </div>
   <div class="d-flex flex-wrap gap-2 position-relative" style="z-index: 1;">
     <a class="btn btn-light" href="{{ url_for('sports.new') }}"><i class="bi bi-lightning-charge-fill me-1"></i>Sport</a>
-    <a class="btn btn-glass" href="{{ url_for('diets.new') }}"><i class="bi bi-cup-straw me-1"></i>Meal</a>
+    <a class="btn btn-glass" href="{{ url_for('diets.new') }}"><i class="bi bi-cup-straw me-1"></i>Diet plan</a>
     <a class="btn btn-glass" href="{{ url_for('goals.new') }}"><i class="bi bi-bullseye me-1"></i>Goal</a>
     <a class="btn btn-glass" href="{{ url_for('stats.new') }}"><i class="bi bi-rulers me-1"></i>Body stats</a>
   </div>
@@ -55,16 +55,11 @@
     <div class="card stat-card accent-red h-100">
       <div class="card-body">
         <div class="d-flex align-items-center gap-3 mb-2">
-          <span class="stat-icon red"><i class="bi bi-egg-fried"></i></span>
-          <span class="text-muted small text-uppercase fw-semibold">Eaten today</span>
+          <span class="stat-icon red"><i class="bi bi-journal-text"></i></span>
+          <span class="text-muted small text-uppercase fw-semibold">Diet plans</span>
         </div>
-        <div class="fs-4 fw-bold">{{ today_totals['calories']|int }} kcal</div>
-        <span class="text-muted small">
-          P {{ today_totals['protein']|int }}g &middot;
-          C {{ today_totals['carbs']|int }}g &middot;
-          F {{ today_totals['fat']|int }}g &middot;
-          {{ today_totals['meals'] }} meal{{ 's' if today_totals['meals'] != 1 }}
-        </span>
+        <div class="fs-4 fw-bold">{{ diet_plan_count }}</div>
+        <a class="text-muted small" href="{{ url_for('diets.index') }}">View your nutrition plans</a>
       </div>
     </div>
   </div>
@@ -77,6 +72,7 @@
     <a class="small" href="{{ url_for('stats.index') }}">Body stats</a>
   </div>
   <div class="card-body">
+    <p class="small text-muted">{{ insight['disclaimer'] }}</p>
     {% if dm['bmi'] %}
     <div class="row text-center">
       <div class="col-6 col-md">
@@ -87,25 +83,18 @@
         </span>
       </div>
       <div class="col-6 col-md">
-        <div class="text-muted small text-uppercase fw-semibold">BMR</div>
+        <div class="text-muted small text-uppercase fw-semibold">Estimated BMR</div>
         <div class="fs-4 fw-bold text-violet">{{ dm['bmr'] if dm['bmr'] is not none else '—' }}</div>
         <span class="small text-muted">kcal resting</span>
       </div>
       <div class="col-6 col-md">
-        <div class="text-muted small text-uppercase fw-semibold">Calorie target</div>
+        <div class="text-muted small text-uppercase fw-semibold">Estimated target</div>
         <div class="fs-4 fw-bold text-rose">{{ dm['calorie_target'] if dm['calorie_target'] is not none else '—' }}</div>
         <span class="small text-muted">{{ dm['goal_direction'] if dm['goal_direction'] else 'not set' }}</span>
       </div>
-      <div class="col-6 col-md">
-        <div class="text-muted small text-uppercase fw-semibold">Intake vs target</div>
-        <div class="fs-4 fw-bold {{ 'text-danger' if dm.get('calorie_delta', 0) > 0 else ('text-success' if dm.get('calorie_delta', 0) < 0 else '') }}">
-          {% if dm['calorie_delta'] is defined and dm['calorie_delta'] is not none %}{{ '%+d'|format(dm['calorie_delta']) }}{% else %}—{% endif %}
-        </div>
-        <span class="small text-muted">kcal/day</span>
-      </div>
     </div>
     {% else %}
-    <p class="text-muted mb-2">Complete your profile (height, birth date) and log a weight measurement plus your lifestyle to unlock BMI and calorie targets.</p>
+    <p class="text-muted mb-2">Add your height, birth date, and a weight measurement to see approximate BMI and energy estimates.</p>
     <div class="d-flex flex-wrap gap-2">
       <a class="btn btn-sm btn-outline-primary" href="{{ url_for('stats.lifestyle') }}"><i class="bi bi-journal-text me-1"></i>Lifestyle profile</a>
       <a class="btn btn-sm btn-outline-success" href="{{ url_for('stats.new') }}"><i class="bi bi-plus-lg me-1"></i>New measurement</a>
@@ -123,25 +112,6 @@
         {% if not charts['trend']['labels'] %}
         <p class="text-muted small mb-0">No measurements yet.</p>
         {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row g-3 mb-4">
-  <div class="col-lg-6">
-    <div class="card shadow-sm border-0 h-100">
-      <div class="card-header bg-white fw-semibold"><i class="bi bi-fire me-2"></i>Daily calories (14 days)</div>
-      <div class="card-body">
-        <canvas id="caloriesChart" height="170"></canvas>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-6">
-    <div class="card shadow-sm border-0 h-100">
-      <div class="card-header bg-white fw-semibold"><i class="bi bi-egg-fried me-2"></i>Macros (14 days)</div>
-      <div class="card-body">
-        <canvas id="macroChart" height="170"></canvas>
       </div>
     </div>
   </div>
@@ -192,18 +162,21 @@
   </div>
   <div class="col-lg-6">
     <div class="card shadow-sm border-0 h-100">
-      <div class="card-header bg-white fw-semibold"><i class="bi bi-cup-straw me-2"></i>Recent meals</div>
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-cup-straw me-2"></i>Your diet plans</span>
+        <a class="small" href="{{ url_for('diets.index') }}">All plans</a>
+      </div>
       <ul class="list-group list-group-flush">
-        {% for m in recent_meals %}
+        {% for plan in diet_plans %}
         <li class="list-group-item d-flex justify-content-between align-items-center py-2">
           <span>
-            <a href="{{ url_for('diets.edit', entry_id=m['id']) }}" class="text-decoration-none">{{ m['description'] }}</a>
-            <br><span class="small text-muted">{{ m['diet_date'] }} &middot; {{ m['meal_type'] }}</span>
+            <a href="{{ url_for('diets.edit', plan_id=plan['id']) }}" class="text-decoration-none">{{ plan['name'] }}</a>
+            <br><span class="small text-muted">{{ plan['guidance']|truncate(90) if plan['guidance'] else 'No guidance added' }}</span>
           </span>
-          <span class="badge bg-warning-subtle border">{{ m['calories']|int if m['calories'] else 0 }} kcal</span>
+          {% if plan['calories'] is not none %}<span class="badge bg-warning-subtle border">{{ plan['calories']|int }} kcal/day</span>{% endif %}
         </li>
         {% else %}
-        <li class="list-group-item text-muted small">No meals yet.</li>
+        <li class="list-group-item text-muted small">No diet plans saved yet.</li>
         {% endfor %}
       </ul>
     </div>
@@ -236,38 +209,5 @@
       }
     });
   }
-
-  new Chart(document.getElementById('caloriesChart'), {
-    type: 'bar',
-    data: {
-      labels: charts.intake.labels,
-      datasets: [{ label: 'kcal', data: charts.intake.calories, backgroundColor: '#4f46e5', borderRadius: 6 }]
-    },
-    options: {
-      maintainAspectRatio: true,
-      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid } },
-      plugins: { legend: { display: false } }
-    }
-  });
-
-  new Chart(document.getElementById('macroChart'), {
-    type: 'bar',
-    data: {
-      labels: charts.intake.labels,
-      datasets: [
-        { label: 'Protein (g)', data: charts.intake.protein, backgroundColor: '#e11d48', stack: 'm' },
-        { label: 'Carbs (g)', data: charts.intake.carbs, backgroundColor: '#2563eb', stack: 'm' },
-        { label: 'Fat (g)', data: charts.intake.fat, backgroundColor: '#7c3aed', stack: 'm' }
-      ]
-    },
-    options: {
-      maintainAspectRatio: true,
-      scales: {
-        x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, beginAtZero: true, grid }
-      },
-      plugins: { legend: { position: 'bottom' } }
-    }
-  });
 </script>
 {% endblock %}

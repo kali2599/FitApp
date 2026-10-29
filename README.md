@@ -4,8 +4,8 @@ A Flask web app for managing your personal fitness life: **sports, diet, goals a
 
 ## Features
 
-FitApp keeps your whole fitness life in one place — plan your training, track what
-you eat, chase your goals, and watch your body change.
+FitApp keeps your fitness planning in one place — plan your training, record your diet,
+set goals, and track body measurements over time.
 
 - **Plan your training** — create sports (e.g. *calisthenics*, *climbing*), each with
   reusable workouts and days. Maintain a personal **library** of exercises and
@@ -15,16 +15,16 @@ you eat, chase your goals, and watch your body change.
   apply to that day only. Cardio-labelled exercises use their own attribute set:
   distance (m), time (s or min), pace (km/min), rounds and rest (s). Reuse a module
   across days and sports; edit it once and every dependent day re-syncs.
-- **Track your diet** — log meals with calories and macros and see your daily totals.
+- **Record your diet** — save named diet plans with guidance, optional daily calorie and macro targets, and an optional daily meal distribution. Pick foods from the bundled CSV library and FitApp calculates the calories and macros for each quantity. Calories can also be calculated from daily macro targets and checked against the 4/4/9 estimate. FitApp does not log meals or food intake.
 - **Set goals, watch progress** — body, skill, strength and cardio goals on one page,
   with automatic progress tracking and a simple way to log each step. Cardio is a goal
   type with five attributes — distance (m), time (s or min), pace (km/min), rounds and
   rest (s) — each carrying its own unit, with progress tracked on distance logged
   manually.
 - **Understand your body** — record weight, body fat and measurements over time and
-  get a personal report: BMI, BMR, TDEE, calorie & macro targets, and tailored diet,
-  training and recovery tips.
-- **Your dashboard** — weight and body-fat trends, today's macros, active goals and
+  get a personal report: BMI, estimated BMR/TDEE, calorie and macro starting points,
+  and general training and recovery suggestions.
+- **Your dashboard** — weight and body-fat trends, saved diet plans, active goals and
   recent activity at a glance.
 - **Private by default** — secure login, with your data stored locally and separated
   per user.
@@ -70,17 +70,27 @@ python run.py
 ```
 
 Open http://127.0.0.1:5000 — sign up, then start building your library, defining sports,
-workouts and days, logging meals and goals, and recording body statistics.
+workouts and days, recording diet plans and goals, and tracking body statistics.
 
 ## Configuration
 
-- `FITAPP_SECRET_KEY` — Flask session secret. Defaults to `dev-secret-change-me`,
-  so set a real value in any deployment.
+- `FITAPP_SECRET_KEY` — stable Flask session secret. If unset, FitApp generates a
+  random key at startup, which signs out users when the process restarts. Set a
+  stable secret in any deployment and share it across app workers.
+- `FITAPP_COOKIE_SECURE` — set to `1` when serving over HTTPS to mark session cookies
+  secure. It defaults to `0` for local HTTP development.
 - `DATABASE` — SQLite path, defaulting to `instance/fitapp.db`. Also overridable
   per call via `create_app({"DATABASE": ...})` and, for the user CLI, `user.py --database`.
 
 The schema is created and migrated automatically when the app starts
 (`create_app()` → `db.init_db()`), so a fresh database needs no setup step.
+
+### Food library
+
+The starter catalog is `fitapp/data/foods.csv`. Each row describes the values per
+100 g and must use the columns `food,calories,protein,carbs,fat` in that order.
+Add or edit rows in this file to customize the choices available in meal
+distributions. Food names containing commas must be quoted according to CSV rules.
 
 ## Project layout
 

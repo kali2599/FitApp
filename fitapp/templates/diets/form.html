@@ -1,76 +1,262 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Edit meal' if editing else 'Log a meal' }}{% endblock %}
+{% block title %}{{ 'Edit diet plan' if editing else 'New diet plan' }}{% endblock %}
 {% block back %}
-<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('diets.index') }}">
-  <i class="bi bi-arrow-left me-1"></i>Diet
-</a>
+<a class="btn btn-outline-secondary btn-sm mb-3" href="{{ url_for('diets.index') }}"><i class="bi bi-arrow-left me-1"></i>Diet plans</a>
 {% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-8">
-    <div class="card shadow-sm border-0">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span class="fw-semibold"><i class="bi bi-cup-straw me-2"></i>{{ 'Edit meal' if editing else 'Log a meal' }}</span>
-      </div>
-      <div class="card-body">
-        <form method="post" novalidate>
+<div class="row justify-content-center"><div class="col-xl-10">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white fw-semibold"><i class="bi bi-journal-text me-2"></i>{{ 'Edit diet plan' if editing else 'New diet plan' }}</div>
+    <div class="card-body">
+      <p class="text-muted">Describe the diet you follow. Daily targets and the meal distribution are optional. Foods come from the editable per-100 g library. No food intake is logged.</p>
+      <form method="post" novalidate id="dietPlanForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+          <label class="form-label" for="name">Diet name *</label>
+          <input class="form-control" id="name" name="name" type="text" maxlength="120" value="{{ plan['name'] or '' }}" placeholder="e.g. Mediterranean, high-protein" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="guidance">Guidance / description</label>
+          <textarea class="form-control" id="guidance" name="guidance" rows="4" placeholder="Describe your approach, foods, schedule, or other notes">{{ plan['guidance'] or '' }}</textarea>
+        </div>
+        <fieldset class="mb-4">
+          <legend class="h6">Optional daily targets</legend>
           <div class="row">
-            <div class="col-md-4 mb-3">
-              <label class="form-label" for="diet_date">Date *</label>
-              <input class="form-control" id="diet_date" name="diet_date" type="date"
-                     value="{{ entry['diet_date'] or '' }}" required>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label" for="meal_type">Meal type *</label>
-              <select class="form-select" id="meal_type" name="meal_type" required>
-                <option value="">Choose...</option>
-                {% for m in meal_types %}
-                <option value="{{ m }}" {% if entry['meal_type'] == m %}selected{% endif %}>{{ m }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label" for="calories">Calories (kcal)</label>
-              <input class="form-control" id="calories" name="calories" type="number" min="0" step="1"
-                     value="{{ entry['calories'] if entry['calories'] is not none else '' }}">
-            </div>
+            <div class="col-md-3 mb-3"><label class="form-label" for="calories">Total calories (kcal)</label><input class="form-control daily-target" id="calories" name="calories" type="number" min="0" max="10000" step="1" value="{{ plan['calories'] if plan['calories'] is not none else '' }}"><div class="form-text">Automatically set from all three macro targets.</div></div>
+            <div class="col-md-3 mb-3"><label class="form-label" for="protein_g">Protein (g)</label><input class="form-control daily-target macro-target" id="protein_g" name="protein_g" data-kcal-factor="4" type="number" min="0" max="1000" step="0.1" value="{{ plan['protein_g'] if plan['protein_g'] is not none else '' }}"><div class="form-text macro-kcal-hint" data-empty-label="4 kcal/g">4 kcal/g</div></div>
+            <div class="col-md-3 mb-3"><label class="form-label" for="carbs_g">Carbohydrates (g)</label><input class="form-control daily-target macro-target" id="carbs_g" name="carbs_g" data-kcal-factor="4" type="number" min="0" max="2000" step="0.1" value="{{ plan['carbs_g'] if plan['carbs_g'] is not none else '' }}"><div class="form-text macro-kcal-hint" data-empty-label="4 kcal/g">4 kcal/g</div></div>
+            <div class="col-md-3 mb-3"><label class="form-label" for="fat_g">Fat (g)</label><input class="form-control daily-target macro-target" id="fat_g" name="fat_g" data-kcal-factor="9" type="number" min="0" max="500" step="0.1" value="{{ plan['fat_g'] if plan['fat_g'] is not none else '' }}"><div class="form-text macro-kcal-hint" data-empty-label="9 kcal/g">9 kcal/g</div></div>
           </div>
-          <div class="mb-3">
-            <label class="form-label" for="description">Description *</label>
-            <input class="form-control" id="description" name="description" type="text"
-                   value="{{ entry['description'] or '' }}" placeholder="Chicken breast, rice and broccoli" required>
-          </div>
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <label class="form-label" for="protein_g">Protein (g)</label>
-              <input class="form-control" id="protein_g" name="protein_g" type="number" min="0" step="0.1"
-                     value="{{ entry['protein_g'] if entry['protein_g'] is not none else '' }}">
+          <div class="form-text">Enter protein, carbohydrates, and fat to calculate total calories automatically. Calories use 4 × protein + 4 × carbohydrates + 9 × fat; manual calorie values are checked within 5% or 10 kcal. If daily macro targets are incomplete, a complete meal distribution is used instead.</div>
+          <div id="targetMacroCalories" class="small mt-2 text-muted" aria-live="polite"></div>
+        </fieldset>
+
+        <section class="border-top pt-4" aria-labelledby="mealDistributionHeading">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+              <h2 class="h5 mb-1" id="mealDistributionHeading">Daily meal distribution <span class="text-muted fw-normal">(optional)</span></h2>
+              <p class="small text-muted mb-0">Choose foods from the library and enter their quantity. Calories and macros are calculated from the library's per-100 g values.</p>
             </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label" for="carbs_g">Carbs (g)</label>
-              <input class="form-control" id="carbs_g" name="carbs_g" type="number" min="0" step="0.1"
-                     value="{{ entry['carbs_g'] if entry['carbs_g'] is not none else '' }}">
+            <button class="btn btn-outline-success btn-sm" type="button" id="addMeal"><i class="bi bi-plus-lg me-1"></i>Add meal</button>
+          </div>
+          <div id="mealList">
+            {% for meal_data in plan.get('meals', []) %}
+              {% set meal = meal_data.get('meal', meal_data) %}
+              {% set meal_name = meal.get('name', '') %}
+              {% set meal_index = loop.index0 %}
+            <div class="card bg-light border-0 mb-3 diet-meal" data-meal-index="{{ meal_index }}">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                  <div class="flex-grow-1"><label class="form-label" for="meal_name_{{ meal_index }}">Meal name *</label><input class="form-control meal-name" id="meal_name_{{ meal_index }}" name="meal_name" type="text" value="{{ meal_name }}" placeholder="e.g. Breakfast" required></div>
+                  <button class="btn btn-outline-danger btn-sm remove-meal mt-4" type="button" aria-label="Remove meal"><i class="bi bi-trash"></i></button>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-2">
+                    <thead><tr><th>Food</th><th style="min-width:95px">Quantity (g)</th><th style="min-width:105px">Protein (g)</th><th style="min-width:105px">Carbs (g)</th><th style="min-width:95px">Fat (g)</th><th class="text-end">kcal</th><th></th></tr></thead>
+                    <tbody class="food-list">
+                    {% for food in meal_data.get('foods', []) %}
+                      <tr class="food-row">
+                        <td><select class="form-select form-select-sm food-name" name="food_name" aria-label="Food" required>
+                          {% if food['name'] not in food_catalog|map(attribute='food')|list %}<option value="{{ food['name'] }}" selected disabled>{{ food['name'] }} (not in library; choose a replacement)</option>{% endif %}
+                          <option value="">Choose a food</option>
+                          {% for item in food_catalog %}<option value="{{ item.food }}" data-calories="{{ item.calories }}" data-protein="{{ item.protein }}" data-carbs="{{ item.carbs }}" data-fat="{{ item.fat }}" {% if item.food == food['name'] %}selected{% endif %}>{{ item.food }}</option>{% endfor %}
+                        </select><input type="hidden" name="food_meal" value="{{ meal_index }}"></td>
+                        <td><input class="form-control form-control-sm food-quantity" name="food_quantity" type="number" min="0.1" max="10000" step="0.1" value="{{ food['quantity_g'] if food['quantity_g'] is not none else '' }}" placeholder="e.g. 100" aria-label="Quantity in grams" required></td>
+                        <td class="food-protein text-nowrap">—</td>
+                        <td class="food-carbs text-nowrap">—</td>
+                        <td class="food-fat text-nowrap">—</td>
+                        <td class="text-end food-calories">—</td>
+                        <td><button class="btn btn-sm btn-link text-danger remove-food" type="button" aria-label="Remove food"><i class="bi bi-x-lg"></i></button></td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot><tr><th>Meal total</th><th></th><th class="meal-protein">0 g</th><th class="meal-carbs">0 g</th><th class="meal-fat">0 g</th><th class="text-end meal-calories">0 kcal</th><th></th></tr></tfoot>
+                  </table>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm add-food" type="button"><i class="bi bi-plus-lg me-1"></i>Add food</button>
+              </div>
             </div>
-            <div class="col-md-4 mb-3">
-              <label class="form-label" for="fat_g">Fat (g)</label>
-              <input class="form-control" id="fat_g" name="fat_g" type="number" min="0" step="0.1"
-                     value="{{ entry['fat_g'] if entry['fat_g'] is not none else '' }}">
-            </div>
+            {% endfor %}
           </div>
-          <div class="mb-3">
-            <label class="form-label" for="notes">Notes</label>
-            <input class="form-control" id="notes" name="notes" type="text"
-                   value="{{ entry['notes'] or '' }}" placeholder="Optional notes">
-          </div>
-          <div class="d-flex gap-2">
-            <button class="btn btn-success" type="submit">
-              <i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Add meal' }}
-            </button>
-            <a class="btn btn-outline-secondary" href="{{ url_for('diets.index') }}">Cancel</a>
-          </div>
-        </form>
-      </div>
+          <div id="mealEmpty" class="text-muted small py-2 {% if plan.get('meals') %}d-none{% endif %}">No meals added. This section can stay empty.</div>
+          <div id="mealTotals" class="small text-end fw-semibold mt-2" aria-live="polite"></div>
+        </section>
+
+        <div class="d-flex gap-2 mt-4">
+          <button class="btn btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>{{ 'Save changes' if editing else 'Save diet plan' }}</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('diets.index') }}">Cancel</a>
+        </div>
+      </form>
     </div>
   </div>
-</div>
+</div></div>
+{% endblock %}
+
+{% block scripts %}
+<template id="foodCatalog">
+  <option value="">Choose a food</option>
+  {% for item in food_catalog %}<option value="{{ item.food }}" data-calories="{{ item.calories }}" data-protein="{{ item.protein }}" data-carbs="{{ item.carbs }}" data-fat="{{ item.fat }}">{{ item.food }}</option>{% endfor %}
+</template>
+<script>
+(() => {
+  const list = document.getElementById('mealList');
+  const empty = document.getElementById('mealEmpty');
+  const addMealButton = document.getElementById('addMeal');
+  const form = document.getElementById('dietPlanForm');
+  let nextMealIndex = list.querySelectorAll('.diet-meal').length;
+
+  function updateMacroHint(input) {
+    const hint = input.parentElement.querySelector('.macro-kcal-hint');
+    if (!hint) return;
+    const grams = input.value.trim();
+    if (grams === '' || !Number.isFinite(Number(grams))) {
+      hint.textContent = hint.dataset.emptyLabel;
+      return;
+    }
+    const kcal = Number(grams) * Number(input.dataset.kcalFactor);
+    hint.textContent = `≈ ${kcal.toFixed(1)} kcal`;
+  }
+
+  function updateFoodRow(row) {
+    row.querySelectorAll('.food-macro').forEach(updateMacroHint);
+    const selected = row.querySelector('.food-name').selectedOptions[0];
+    const quantity = Number(row.querySelector('.food-quantity').value);
+    const hasFood = selected && selected.value && Number.isFinite(quantity) && quantity > 0;
+    ['protein', 'carbs', 'fat'].forEach(key => {
+      row.querySelector(`.food-${key}`).textContent = hasFood
+        ? (Number(selected.dataset[key]) * quantity / 100).toFixed(1) + ' g' : '—';
+    });
+    row.querySelector('.food-calories').textContent = hasFood
+      ? (Number(selected.dataset.calories) * quantity / 100).toFixed(1) : '—';
+  }
+
+  function updateTotals() {
+    const all = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+    list.querySelectorAll('.diet-meal').forEach(meal => {
+      const subtotal = { protein: 0, carbs: 0, fat: 0, calories: 0 };
+      meal.querySelectorAll('.food-row').forEach(row => {
+        updateFoodRow(row);
+        const selected = row.querySelector('.food-name').selectedOptions[0];
+        const quantity = Number(row.querySelector('.food-quantity').value);
+        if (selected && selected.value && Number.isFinite(quantity) && quantity > 0) {
+          const scale = quantity / 100;
+          subtotal.protein += Number(selected.dataset.protein) * scale;
+          subtotal.carbs += Number(selected.dataset.carbs) * scale;
+          subtotal.fat += Number(selected.dataset.fat) * scale;
+          subtotal.calories += Number(selected.dataset.calories) * scale;
+        }
+      });
+      meal.querySelector('.meal-protein').textContent = subtotal.protein.toFixed(1) + ' g';
+      meal.querySelector('.meal-carbs').textContent = subtotal.carbs.toFixed(1) + ' g';
+      meal.querySelector('.meal-fat').textContent = subtotal.fat.toFixed(1) + ' g';
+      meal.querySelector('.meal-calories').textContent = subtotal.calories.toFixed(1) + ' kcal';
+      Object.keys(all).forEach(key => all[key] += subtotal[key]);
+    });
+    const totals = document.getElementById('mealTotals');
+    const hasMeals = list.querySelectorAll('.food-row').length > 0;
+    totals.textContent = hasMeals
+      ? `Daily meal total: ${all.calories.toFixed(1)} kcal · P ${all.protein.toFixed(1)} g · C ${all.carbs.toFixed(1)} g · F ${all.fat.toFixed(1)} g`
+      : '';
+    empty.classList.toggle('d-none', list.querySelectorAll('.diet-meal').length > 0);
+  }
+
+  function addFood(meal) {
+    const row = document.createElement('tr');
+    row.className = 'food-row';
+    const foodOptions = document.getElementById('foodCatalog').content.cloneNode(true);
+    row.innerHTML = `<td><select class="form-select form-select-sm food-name" name="food_name" aria-label="Food" required></select><input type="hidden" name="food_meal"></td>
+      <td><input class="form-control form-control-sm food-quantity" name="food_quantity" type="number" min="0.1" max="10000" step="0.1" placeholder="e.g. 100" aria-label="Quantity in grams" required></td>
+      <td class="food-protein text-nowrap">—</td><td class="food-carbs text-nowrap">—</td><td class="food-fat text-nowrap">—</td>
+      <td class="text-end food-calories">—</td><td><button class="btn btn-sm btn-link text-danger remove-food" type="button" aria-label="Remove food"><i class="bi bi-x-lg"></i></button></td>`;
+    row.querySelector('.food-name').append(...foodOptions.children);
+    meal.querySelector('.food-list').appendChild(row);
+    row.querySelector('[name="food_meal"]').value = meal.dataset.mealIndex;
+    updateTotals();
+  }
+
+  function addMeal() {
+    const index = nextMealIndex++;
+    const meal = document.createElement('div');
+    meal.className = 'card bg-light border-0 mb-3 diet-meal';
+    meal.dataset.mealIndex = index;
+    meal.innerHTML = `<div class="card-body">
+      <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+        <div class="flex-grow-1"><label class="form-label" for="meal_name_${index}">Meal name *</label><input class="form-control meal-name" id="meal_name_${index}" name="meal_name" type="text" placeholder="e.g. Breakfast" required></div>
+        <button class="btn btn-outline-danger btn-sm remove-meal mt-4" type="button" aria-label="Remove meal"><i class="bi bi-trash"></i></button>
+      </div>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-2">
+        <thead><tr><th>Food</th><th style="min-width:95px">Quantity (g)</th><th style="min-width:105px">Protein (g)</th><th style="min-width:105px">Carbs (g)</th><th style="min-width:95px">Fat (g)</th><th class="text-end">kcal</th><th></th></tr></thead>
+        <tbody class="food-list"></tbody>
+        <tfoot><tr><th>Meal total</th><th></th><th class="meal-protein">0 g</th><th class="meal-carbs">0 g</th><th class="meal-fat">0 g</th><th class="text-end meal-calories">0 kcal</th><th></th></tr></tfoot>
+      </table></div>
+      <button class="btn btn-outline-secondary btn-sm add-food" type="button"><i class="bi bi-plus-lg me-1"></i>Add food</button>
+    </div>`;
+    list.appendChild(meal);
+    addFood(meal);
+    updateMealIndexes();
+  }
+
+  function updateMealIndexes() {
+    list.querySelectorAll('.diet-meal').forEach((meal, index) => {
+      meal.dataset.mealIndex = index;
+      meal.querySelectorAll('[name="food_meal"]').forEach(input => input.value = index);
+    });
+    empty.classList.toggle('d-none', list.querySelectorAll('.diet-meal').length > 0);
+  }
+
+  list.addEventListener('click', event => {
+    const meal = event.target.closest('.diet-meal');
+    if (event.target.closest('.add-food') && meal) addFood(meal);
+    if (event.target.closest('.remove-food')) event.target.closest('.food-row').remove();
+    if (event.target.closest('.remove-meal') && meal) meal.remove();
+    updateMealIndexes();
+    updateTotals();
+  });
+  list.addEventListener('input', updateTotals);
+  list.addEventListener('change', updateTotals);
+  addMealButton.addEventListener('click', addMeal);
+
+  const targetCalories = document.getElementById('calories');
+  const targetProtein = document.getElementById('protein_g');
+  const targetCarbs = document.getElementById('carbs_g');
+  const targetFat = document.getElementById('fat_g');
+  const targetOutput = document.getElementById('targetMacroCalories');
+  let caloriesWereDerived = false;
+  function updateTargetCalories(derive = false) {
+    const p = targetProtein.value, c = targetCarbs.value, f = targetFat.value;
+    const complete = p !== '' && c !== '' && f !== '';
+    if (derive && complete) {
+      const kcal = 4 * Number(p) + 4 * Number(c) + 9 * Number(f);
+      targetCalories.value = Math.round(kcal);
+      caloriesWereDerived = true;
+    } else if (derive && !complete && caloriesWereDerived) {
+      targetCalories.value = '';
+      caloriesWereDerived = false;
+    }
+    if (complete) {
+      const kcal = 4 * Number(p) + 4 * Number(c) + 9 * Number(f);
+      targetOutput.textContent = `${caloriesWereDerived ? 'Total calories set from macros' : 'Macro-derived calories'}: ${kcal.toFixed(1)} kcal`;
+      targetOutput.classList.toggle('text-danger', targetCalories.value !== '' && Math.abs(Number(targetCalories.value) - kcal) > Math.max(10, kcal * 0.05));
+      targetOutput.classList.toggle('text-muted', targetCalories.value === '' || Math.abs(Number(targetCalories.value) - kcal) <= Math.max(10, kcal * 0.05));
+    } else {
+      targetOutput.textContent = '';
+    }
+  }
+  form.querySelectorAll('.macro-target').forEach(input => input.addEventListener('input', () => {
+    updateMacroHint(input);
+    updateTargetCalories(true);
+  }));
+  targetCalories.addEventListener('input', () => {
+    caloriesWereDerived = false;
+    updateTargetCalories();
+  });
+  form.querySelectorAll('.macro-kcal-hint').forEach(hint => {
+    const input = hint.parentElement.querySelector('input[data-kcal-factor]');
+    if (input) updateMacroHint(input);
+  });
+  updateMealIndexes();
+  updateTotals();
+  updateTargetCalories();
+})();
+</script>
 {% endblock %}

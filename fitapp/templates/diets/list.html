@@ -4,89 +4,77 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h3 mb-1">Diet</h1>
-    <p class="text-muted mb-0">{{ entries|length }} meal{{ 's' if entries|length != 1 }} logged</p>
+    <p class="text-muted mb-0">{{ plans|length }} diet plan{{ 's' if plans|length != 1 }}</p>
   </div>
-  <a class="btn btn-success" href="{{ url_for('diets.new') }}"><i class="bi bi-plus-lg me-1"></i>Log a meal</a>
+  <a class="btn btn-success" href="{{ url_for('diets.new') }}"><i class="bi bi-plus-lg me-1"></i>Add diet plan</a>
 </div>
 
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card shadow-sm border-0 text-center">
-      <div class="card-body py-3">
-        <div class="text-muted small">Today's calories</div>
-        <div class="fs-4 fw-semibold text-violet">{{ totals['calories']|int }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card shadow-sm border-0 text-center">
-      <div class="card-body py-3">
-        <div class="text-muted small">Protein</div>
-        <div class="fs-4 fw-semibold text-danger">{{ totals['protein']|int }} g</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card shadow-sm border-0 text-center">
-      <div class="card-body py-3">
-        <div class="text-muted small">Carbs</div>
-        <div class="fs-4 fw-semibold text-primary">{{ totals['carbs']|int }} g</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card shadow-sm border-0 text-center">
-      <div class="card-body py-3">
-        <div class="text-muted small">Fat</div>
-        <div class="fs-4 fw-semibold text-dark">{{ totals['fat']|int }} g</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="card shadow-sm border-0">
-  <div class="table-responsive">
-    <table class="table align-middle mb-0">
-      <thead class="table-light">
-        <tr>
-          <th>Date</th>
-          <th>Meal</th>
-          <th>Description</th>
-          <th class="text-end">kcal</th>
-          <th class="text-end">P / C / F</th>
-          <th class="text-end">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for e in entries %}
-        <tr>
-          <td class="text-nowrap">{{ e['diet_date'] }}</td>
-          <td><span class="badge text-bg-light border">{{ e['meal_type'] }}</span></td>
-          <td>
-            {{ e['description'] }}
-            {% if e['notes'] %}<br><span class="small text-muted">{{ e['notes'] }}</span>{% endif %}
-          </td>
-          <td class="text-end">{{ e['calories']|int if e['calories'] is not none else '—' }}</td>
-          <td class="text-end small text-muted">
-            {{ e['protein_g']|int if e['protein_g'] is not none else '—' }} /
-            {{ e['carbs_g']|int if e['carbs_g'] is not none else '—' }} /
-            {{ e['fat_g']|int if e['fat_g'] is not none else '—' }}
-          </td>
-          <td class="text-end text-nowrap">
-            <a class="btn btn-sm btn-outline-success" href="{{ url_for('diets.edit', entry_id=e['id']) }}">
-              <i class="bi bi-pencil"></i>
-            </a>
-            <form class="d-inline" action="{{ url_for('diets.delete', entry_id=e['id']) }}" method="post"
-                  onsubmit="return confirm('Delete this meal entry?');">
-              <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+<div class="row g-3">
+  {% for plan in plans %}
+  <div class="col-md-6 col-xl-4">
+    <article class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+          <h2 class="h5 mb-0">{{ plan['name'] }}</h2>
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-outline-success" href="{{ url_for('diets.edit', plan_id=plan['id']) }}" aria-label="Edit {{ plan['name'] }}"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('diets.delete', plan_id=plan['id']) }}" method="post" onsubmit="return confirm('Delete this diet plan?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-danger" type="submit" aria-label="Delete {{ plan['name'] }}"><i class="bi bi-trash"></i></button>
             </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6" class="text-center text-muted py-4">No meals logged yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          </div>
+        </div>
+        {% if plan['guidance'] %}<p class="text-muted mb-3">{{ plan['guidance'] }}</p>{% else %}<p class="text-muted fst-italic mb-3">No guidance added.</p>{% endif %}
+        {% if plan['calories'] is not none or plan['protein_g'] is not none or plan['carbs_g'] is not none or plan['fat_g'] is not none %}
+        <div class="border-top pt-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-2">Optional daily targets</div>
+          <div class="d-flex flex-wrap gap-2">
+            {% if plan['calories'] is not none %}<span class="badge text-bg-light border">{{ plan['calories']|int }} kcal</span>{% endif %}
+            {% if plan['protein_g'] is not none %}<span class="badge text-bg-light border">P {{ plan['protein_g']|int }} g</span>{% endif %}
+            {% if plan['carbs_g'] is not none %}<span class="badge text-bg-light border">C {{ plan['carbs_g']|int }} g</span>{% endif %}
+            {% if plan['fat_g'] is not none %}<span class="badge text-bg-light border">F {{ plan['fat_g']|int }} g</span>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+        {% set detail = plan_details[plan['id']] %}
+        {% set meals = detail[0] %}
+        {% if meals %}
+        <div class="border-top pt-3 mt-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="text-muted small text-uppercase fw-semibold">Daily meal distribution</div>
+            <div class="small text-nowrap">{{ detail[1]['calories']|round(1) }} kcal · P {{ detail[1]['protein_g']|round(1) }} g · C {{ detail[1]['carbs_g']|round(1) }} g · F {{ detail[1]['fat_g']|round(1) }} g</div>
+          </div>
+          {% for item in meals %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small fw-semibold mb-1"><span>{{ item['meal']['name'] }}</span><span>{{ item['totals']['calories']|round(1) }} kcal</span></div>
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead><tr><th>Food</th><th class="text-end">Amount</th><th class="text-end">Protein</th><th class="text-end">Carbs</th><th class="text-end">Fat</th><th class="text-end">kcal</th></tr></thead>
+                <tbody>
+                  {% for food in item['foods'] %}
+                  <tr><td>{{ food['name'] }}</td><td class="text-end">{{ food['quantity_g']|round(1) if food['quantity_g'] is not none else '—' }} g</td><td class="text-end">{{ food['protein_g']|round(1) }} g</td><td class="text-end">{{ food['carbs_g']|round(1) }} g</td><td class="text-end">{{ food['fat_g']|round(1) }} g</td><td class="text-end">{{ food['calories']|round(1) }}</td></tr>
+                  {% endfor %}
+                </tbody>
+                <tfoot><tr class="small fw-semibold"><td>Total</td><td></td><td class="text-end">{{ item['totals']['protein_g']|round(1) }} g</td><td class="text-end">{{ item['totals']['carbs_g']|round(1) }} g</td><td class="text-end">{{ item['totals']['fat_g']|round(1) }} g</td><td class="text-end">{{ item['totals']['calories']|round(1) }}</td></tr></tfoot>
+              </table>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-white small text-muted">Added {{ plan['created_at'][:10] }}</div>
+    </article>
   </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card shadow-sm border-0"><div class="card-body text-center py-5">
+      <i class="bi bi-journal-text display-4 icon-grad"></i>
+      <p class="mt-3 mb-2">No diet plans yet.</p>
+      <p class="text-muted">Save your nutrition approach and optional daily targets here.</p>
+      <a class="btn btn-success" href="{{ url_for('diets.new') }}">Create a diet plan</a>
+    </div></div>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}

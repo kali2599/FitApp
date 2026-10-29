@@ -36,7 +36,6 @@ LIFESTYLE_FIELDS = [
     ("session_duration_min", "Session length (minutes)", to_int, 5, 600),
     ("activity_level", "Daily activity level", None, None, None),
     ("sleep_hours", "Sleep per night (hours)", to_float, 0.5, 24),
-    ("daily_calories", "Daily calorie intake", to_float, 500, 10000),
     ("goal_direction", "Goal direction", None, None, None),
     ("water_cups", "Water intake (cups/day)", to_float, 0, 30),
     ("stress_level", "Stress level", None, None, None),
@@ -57,7 +56,6 @@ def _lifestyle_form(data=None):
         "session_duration_min": "",
         "activity_level": "",
         "sleep_hours": "",
-        "daily_calories": "",
         "goal_direction": "",
         "water_cups": "",
         "stress_level": "",
@@ -169,16 +167,15 @@ def lifestyle():
         db.execute(
             """INSERT INTO user_lifestyle (user_id, sessions_per_week, intensity,
                                           session_duration_min, activity_level,
-                                          sleep_hours, daily_calories, goal_direction,
+                                          sleep_hours, goal_direction,
                                           water_cups, stress_level)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(user_id) DO UPDATE SET
                  sessions_per_week = excluded.sessions_per_week,
                  intensity = excluded.intensity,
                  session_duration_min = excluded.session_duration_min,
                  activity_level = excluded.activity_level,
                  sleep_hours = excluded.sleep_hours,
-                 daily_calories = excluded.daily_calories,
                  goal_direction = excluded.goal_direction,
                  water_cups = excluded.water_cups,
                  stress_level = excluded.stress_level""",
@@ -189,7 +186,6 @@ def lifestyle():
                 values["session_duration_min"],
                 values["activity_level"] or None,
                 values["sleep_hours"],
-                values["daily_calories"],
                 values["goal_direction"] or None,
                 values["water_cups"],
                 values["stress_level"] or None,

@@ -23,7 +23,7 @@ def _context():
 
     totals = db.execute(
         """SELECT
-             (SELECT COUNT(*) FROM diets WHERE user_id = ?) AS meals,
+             (SELECT COUNT(*) FROM diet_plans WHERE user_id = ?) AS diet_plans,
              (SELECT COUNT(*) FROM goals WHERE user_id = ? AND status = 'active')
              + (SELECT COUNT(*) FROM cardio_goals WHERE user_id = ? AND status = 'active')
                AS active_goals,

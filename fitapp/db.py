@@ -65,6 +65,37 @@ CREATE TABLE IF NOT EXISTS diets (
     notes       TEXT
 );
 
+CREATE TABLE IF NOT EXISTS diet_plans (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    guidance   TEXT,
+    calories   REAL,
+    protein_g  REAL,
+    carbs_g    REAL,
+    fat_g      REAL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS diet_plan_meals (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    diet_plan_id INTEGER NOT NULL REFERENCES diet_plans (id) ON DELETE CASCADE,
+    position     INTEGER NOT NULL DEFAULT 0,
+    name         TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS diet_plan_foods (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_id       INTEGER NOT NULL REFERENCES diet_plan_meals (id) ON DELETE CASCADE,
+    position      INTEGER NOT NULL DEFAULT 0,
+    name          TEXT NOT NULL,
+    quantity_g    REAL,
+    calories      REAL,
+    protein_g     REAL NOT NULL,
+    carbs_g       REAL NOT NULL,
+    fat_g         REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS body_stats (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id      INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -212,6 +243,9 @@ CREATE INDEX IF NOT EXISTS idx_workouts_sport ON workouts (sport_id, position);
 CREATE INDEX IF NOT EXISTS idx_days_workout ON workout_days (workout_id, position);
 CREATE INDEX IF NOT EXISTS idx_modules_user ON workout_modules (user_id, position);
 CREATE INDEX IF NOT EXISTS idx_diets_user ON diets (user_id, diet_date);
+CREATE INDEX IF NOT EXISTS idx_diet_plans_user ON diet_plans (user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_diet_plan_meals_plan ON diet_plan_meals (diet_plan_id, position);
+CREATE INDEX IF NOT EXISTS idx_diet_plan_foods_meal ON diet_plan_foods (meal_id, position);
 CREATE INDEX IF NOT EXISTS idx_stats_user ON body_stats (user_id, stat_date);
 CREATE INDEX IF NOT EXISTS idx_goals_user ON goals (user_id, status);
 CREATE INDEX IF NOT EXISTS idx_goal_logs_goal ON goal_logs (goal_id, logged_date);

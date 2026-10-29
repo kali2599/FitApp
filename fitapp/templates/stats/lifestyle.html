@@ -15,9 +15,10 @@
       <div class="card-body">
         <p class="text-muted small mb-3">
           These details power your personal insights: calorie targets, macronutrient
-          suggestions and training advice. Everything is optional.
+          estimates and training profile summaries. Everything is optional; no meals or food intake are tracked here.
         </p>
         <form method="post" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="row">
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="sessions_per_week">Sessions per week</label>
@@ -56,11 +57,6 @@
               <label class="form-label" for="sleep_hours">Sleep per night (h)</label>
               <input class="form-control" id="sleep_hours" name="sleep_hours" type="number"
                      min="0.5" max="24" step="0.5" value="{{ values['sleep_hours'] }}" placeholder="e.g. 7.5">
-            </div>
-            <div class="col-6 col-md-4 mb-3">
-              <label class="form-label" for="daily_calories">Daily calories (kcal)</label>
-              <input class="form-control" id="daily_calories" name="daily_calories" type="number"
-                     min="500" max="10000" step="1" value="{{ values['daily_calories'] }}" placeholder="e.g. 2200">
             </div>
             <div class="col-6 col-md-4 mb-3">
               <label class="form-label" for="goal_direction">Goal direction</label>
